@@ -27,17 +27,49 @@ User may choose particular variables or conditions (subsets) to be returned.
 
 # Data Processing
 
-To begin, we need a function that queries the API and returns a tibble. We will follow these steps for development:
+We will follow these steps for data processing:
 
-1.  Achieve a basic call to a sample URL.
-1.  Write a *helper* function to take the return from `GET()` and modify it into a `tibble`.
-1.  Write a function to query API, with editable parameters:
+1.  Achieve a basic call to a sample API endpoint, returning a tibble.
+
+2.  Write a *helper* function to take the return from `GET()` and modify it into a `tibble`.
+
+3.  Write a function to query API, with editable parameters.
+
+4.  Write a function to allow user to specify multiple years of survey data **and** all other options above.
+
+More details including valid arguments, etc. will be listed below, as we address each step.
+
+## Libraries
+Ensuring we have the appropriate libraries for the project and task.
+```{r}
+library(jsonlite)
+#to help with parsing contents of API calls
+
+library(httr)
+#for API URL building
+```
+
+
+## Test call to the Census API
+Before we build functions, let's just make a simple call without any API key, to ensure it works as expected.
+
+```{r}
+#base URL for example: api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR&SCHL=24&key=YOUR_KEY
+URL_ids <- "api.census.gov/data/2022/acs/acs1/pums"
+testinfo <- GET(URL_ids)
+str(testinfo,max.level=1)
+```
+
+
+
+3.  Write a function to query API, with editable parameters:
+
     1.  Year of survey
         -   Default:
             -   2022
         -   Valid:
             -   Integer in \[2010,2022\]
-    1.  Numeric var(s) to return
+    2.  Numeric var(s) to return
         -   Default:
             -   AGEP
             -   PWGTP (req)
@@ -52,7 +84,7 @@ To begin, we need a function that queries the API and returns a tibble. We will 
             -   Translate variables to numeric or time (middle of period) as applicable.
             -   At least one numeric var other than PWGTP must be returned.
             -   Ensure valid user entries.
-    1.  Categorical var(s) to return
+    3.  Categorical var(s) to return
         -   Default:
             -   SEX
         -   Valid:
@@ -67,7 +99,7 @@ To begin, we need a function that queries the API and returns a tibble. We will 
             -   Translate variables into factors with appropriate levels as applicable.
             -   At least one categorical variable must be returned.
             -   Ensure valid user entries.
-    1.  Geography level
+    4.  Geography level
         -   Default:
             -   All
         -   Valid:
@@ -77,18 +109,22 @@ To begin, we need a function that queries the API and returns a tibble. We will 
             -   State
         -   Conditions:
             -   Ensure valid user entries.
-    1.  Subset argument (to adjust API call made)
+    5.  Subset argument (to adjust API call made)
         -   Conditions:
             -   User can specify specific Regions, Divisions, or States.
             -   Only specific levels selected will be returned.
             -   Ensure valid user entries.
-1.  Write a function to allow user to specify multiple years of survey data **and** all other options above.
+
+4.  Write a function to allow user to specify multiple years of survey data **and** all other options above.
+
     -   Conditions:
         -   Call single year function repeatedly as needed.
         -   Combine data into one final tibble, including `year` variable.
-        
+
 # Person Level Records
+
 The Census data returns a form of compressed results, where identical rows representing multiple people are condensed to one row with the field `PWGTP` representing the number of observations (people) associated with that row. We will not replicate these rows to keep our table smaller and simpler, but it must be considered for data summarization to ensure proper proportions are understood.
 
 # Summarizing...
+
 Savannah!
