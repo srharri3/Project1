@@ -25,3 +25,30 @@ We will query the *Public Use Microdata Sample (PUMS) Census API*. The API offer
 
 User may choose particular variables or conditions (subsets) to be returned.
 
+# Data Processing
+
+To begin, we need a function that queries the API and returns a tibble. We will follow these steps for development:
+
+1. Achieve a basic call to a sample URL.
+2. Write a *helper* function to take the return from `GET()` and modify it into a `tibble`.
+3. Write a function to query API, with editable parameters:
+  1. Year of survey
+    - Default:
+      - 2022
+    - Valid: 
+      - Integers in [2010,2022]
+  2. Numeric var(s) to return
+    - Default: 
+      - AGEP
+      - PWGTP (req)
+    - Valid: 
+      - AGEP
+      - GASP
+      - GRPIP
+      - JWAP (time)
+      - JWDP (time)
+      - JWMNP
+    - Conditions: 
+      - Translate variables to numeric or time (middle of period) as applicable.
+      - One numeric var other than PWGTP must be returned.
+      
