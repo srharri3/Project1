@@ -29,26 +29,66 @@ User may choose particular variables or conditions (subsets) to be returned.
 
 To begin, we need a function that queries the API and returns a tibble. We will follow these steps for development:
 
-1. Achieve a basic call to a sample URL.
-2. Write a *helper* function to take the return from `GET()` and modify it into a `tibble`.
-3. Write a function to query API, with editable parameters:
-  1. Year of survey
-    - Default:
-      - 2022
-    - Valid: 
-      - Integers in [2010,2022]
-  2. Numeric var(s) to return
-    - Default: 
-      - AGEP
-      - PWGTP (req)
-    - Valid: 
-      - AGEP
-      - GASP
-      - GRPIP
-      - JWAP (time)
-      - JWDP (time)
-      - JWMNP
-    - Conditions: 
-      - Translate variables to numeric or time (middle of period) as applicable.
-      - One numeric var other than PWGTP must be returned.
-      
+1.  Achieve a basic call to a sample URL.
+1.  Write a *helper* function to take the return from `GET()` and modify it into a `tibble`.
+1.  Write a function to query API, with editable parameters:
+    1.  Year of survey
+        -   Default:
+            -   2022
+        -   Valid:
+            -   Integer in \[2010,2022\]
+    1.  Numeric var(s) to return
+        -   Default:
+            -   AGEP
+            -   PWGTP (req)
+        -   Valid:
+            -   AGEP
+            -   GASP
+            -   GRPIP
+            -   JWAP (time)
+            -   JWDP (time)
+            -   JWMNP
+        -   Conditions:
+            -   Translate variables to numeric or time (middle of period) as applicable.
+            -   At least one numeric var other than PWGTP must be returned.
+            -   Ensure valid user entries.
+    1.  Categorical var(s) to return
+        -   Default:
+            -   SEX
+        -   Valid:
+            -   FER
+            -   HHL
+            -   HISPEED
+            -   JWTRNS
+            -   SCH
+            -   SCHL
+            -   SEX
+        -   Conditions:
+            -   Translate variables into factors with appropriate levels as applicable.
+            -   At least one categorical variable must be returned.
+            -   Ensure valid user entries.
+    1.  Geography level
+        -   Default:
+            -   All
+        -   Valid:
+            -   All
+            -   Region
+            -   Division
+            -   State
+        -   Conditions:
+            -   Ensure valid user entries.
+    1.  Subset argument (to adjust API call made)
+        -   Conditions:
+            -   User can specify specific Regions, Divisions, or States.
+            -   Only specific levels selected will be returned.
+            -   Ensure valid user entries.
+1.  Write a function to allow user to specify multiple years of survey data **and** all other options above.
+    -   Conditions:
+        -   Call single year function repeatedly as needed.
+        -   Combine data into one final tibble, including `year` variable.
+        
+# Person Level Records
+The Census data returns a form of compressed results, where identical rows representing multiple people are condensed to one row with the field `PWGTP` representing the number of observations (people) associated with that row. We will not replicate these rows to keep our table smaller and simpler, but it must be considered for data summarization to ensure proper proportions are understood.
+
+# Summarizing...
+Savannah!
