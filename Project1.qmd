@@ -39,11 +39,25 @@ We will follow these steps for data processing:
 
 More details including valid arguments, etc. will be listed below, as we address each step.
 
+## Libraries
+Ensuring we have the appropriate libraries for the project and task.
+```{r}
+library(jsonlite)
+#to help with parsing contents of API calls
+
+library(httr)
+#for API URL building
+```
+
+
 ## Test call to the Census API
 Before we build functions, let's just make a simple call without any API key, to ensure it works as expected.
 
 ```{r}
-
+#base URL for example: api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR&SCHL=24&key=YOUR_KEY
+URL_ids <- "api.census.gov/data/2022/acs/acs1/pums"
+testinfo <- GET(URL_ids)
+str(testinfo,max.level=1)
 ```
 
 
