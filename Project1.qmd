@@ -1,6 +1,27 @@
 ---
-title: "Project 1 Team N"
+title: "ST 558 | Project 1 | Team N"
+author: Savannah Harrison, Andy Powers
 format: html
 editor: visual
 ---
+
+# Introduction
+
+This project demonstrates use of R for manipulating and processing census datasets via API. Generic functions will auto-summarize and auto-plot returned data. The document will describe how these function and provide examples.
+
+# Data Source
+
+We will query the *Public Use Microdata Sample (PUMS) Census API*. The API offers *pseudo person-level* data. To demonstrate our functions while avoiding memory errors, we will default to a subset of state 14 data. Users may adjust this within our function calls.
+
+## Resources
+
+-   [Information about the PUMS API](https://www.census.gov/data/developers/data-sets/census-microdata-api.html)
+-   [Variable list (2022)](https://api.census.gov/data/2022/acs/acs1/pums/variables.html)
+-   [API call examples](https://api.census.gov/data/2022/acs/acs1/pums/examples.html)
+-   [Menu-based API call explorer](https://data.census.gov/mdat/#/)
+-   Sample: `api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR&SCHL=24&key=YOUR_KEY`
+
+## User Choices
+
+User may choose particular variables or conditions (subsets) to be returned.
 
