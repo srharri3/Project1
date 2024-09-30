@@ -54,6 +54,7 @@ library(httr)
 library(dplyr)
 library(magrittr)
 library(tidyr)
+library(RSQLite)
 ```
 
 ## Test call to the Census API
@@ -104,7 +105,7 @@ We need to replace encoded values with labels from the variable lookups. This re
 # returns: list of key and lookup values
 # error handling: none; only call this function with valid variable name and year
 # https://api.census.gov/data/YEAR/acs/acs1/pums/variables/VARNAME.json
-getLookup <- function(varName, year) {
+getLookup <- function(varName, year=2022) {
   
   #prepare url
   lookup_URL_base1 <- 'https://api.census.gov/data/'
@@ -493,36 +494,48 @@ formatResults <- function(results,year=2022) {
   #loop through all possible vars requiring update
   #if it exists in our tibble as a column, mutate the column type appropriately
   for (varName in all_variables) {
-    
+#print(varName)    
     #loop through all columns in tibble
     for (colName in names(results)) {
-      
+#print(colName)      
       #if a match 
       if (varName == colName) {
         
         #get lookup data
-        lookup <- getLookup(varName,year)
-        
+        #print(paste("calling get Lookup with vars:",varName,year))
+        print(results[varName])
+        #str(results[varName])
+        #str(varName)
         #for a numeric type, swap its contents to numeric
         if (varName %in% numeric_variables) {
-          results |> mutate(varName = as.numeric(results[varName]))
+          results[varName] <- as.numeric(results[[varName]])
+          print(as.numeric(results[[varName]]))
+          print(varName)
+          print(results[varName])
+          results[varName] <- mutate(results[varName],varName = as.numeric(results[[varName]]))
+          print(head(results))
         }
         
         #for a time type, swap its contents to numeric
-        if (varName %in% time_variables) {
-          results |> mutate(varName = as.numeric(results[varName]))
+     #   if (varName %in% time_variables) {
+      #    results |> mutate(varName = as.numeric(results[varName]))
          
           #revise values 
-        }
+#        }
         
         #for a cate type, swap its contents from index to label 
         if (varName %in% cat_variables) {
           #results |> mutate(varName = as.numeric(results[varName]))
           
           #make a temp join but only keep the lookup
+          lookup <- getLookup(varName,year)
           temp <- results[varName]
-          temp_join <- left_join(temp,lookup,by=join_by(varName == varName))
-         
+          names(temp)='name'
+          print(temp)
+          print(varName)
+          print(lookup)
+          temp_join <- left_join(temp,lookup,by=join_by(name == name))
+return(temp_join)
           #revise values 
         }
                                       
@@ -1096,19 +1109,6 @@ test_results <- getToTibble(
 test_results
 ```
 
-
-
-## Validating query function (single year)
-Now, let's run some sample calls.
-
-```{r}
-test_results <- getToTibble(
-  queryCensus(yr=2022,catVars=c('SEX','HISPEED'),
-              #geoLevel='Division',geoSubset = 2,
-              numVars=c('AGEP','PWGTP','GASP','JWAP'))
-)
-test_results
-```
 
 
 
