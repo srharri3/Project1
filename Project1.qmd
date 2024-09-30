@@ -34,7 +34,7 @@ library(ggplot2)
 ```
 
 ```{r}
-plot.census <- function(census_tibble, num_var, cat_var) {
+plot_census <- function(census_tibble, num_var, cat_var) {
   ggplot(data = _your_census_tibble_or_modification_,
 aes(x = get(cat_var), y = get(num_var), weight = PWGTP)) + geom_boxplot()
 }
