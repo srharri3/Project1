@@ -515,7 +515,7 @@ formatResults <- function(results,year=2022) {
         
         #for a categ type, swap its contents from index to label 
         if (varName %in% cat_variables) {
-          
+
           #make a temp join but only keep the replaced char labels in the result column
           lookup <- getLookup(varName,year)
           temp <- results[varName]
@@ -539,16 +539,16 @@ formatResults <- function(results,year=2022) {
   #special handling for geo lookup, because in function call previously it doesn't like it 
 
   #make a temp join but only keep the replaced char labels in the result column
-  if("Region" %in% names(results)) {
-    geoLevel <- "Region"
+  if("region" %in% names(results)) {
+    geoLevel <- "region"
     geoLevel_query <- "REGION"
   }
-  else if("Division" %in% names(results)) {
-    geoLevel <- "Division"
+  else if("division" %in% names(results)) {
+    geoLevel <- "division"
     geoLevel_query <- "DIVISION"
   }
   else {
-    geoLevel <- "State"
+    geoLevel <- "state"
     geoLevel_query <- "ST"
   }
 
@@ -1126,7 +1126,19 @@ test_results
 
 
 
-Success!
+Success! Let's try ALL OF THEM.
+
+```{r}
+year=2022
+test_results <- getToTibble(
+  queryCensus(year,
+              catVars=c('SEX','HISPEED','FER','HHL','JWTRNS','SCH','SCHL'),
+              geoLevel='State',
+              geoSubset = 17,
+              numVars=c('AGEP','PWGTP','GASP','GRPIP','JWAP','JWDP','JWMNP'))
+)
+test_results
+```
 
 *Note that if syntax changes or limitations exist for other years of data (for instance, say 'HISPEED' was not available in year X), requests may fail.*
 
