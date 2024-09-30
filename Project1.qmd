@@ -145,12 +145,11 @@ To make this manageable, we will use helper functions for tasks like validating 
     -   Conditions:
         -   Ensure valid user entries.
     -   Function: checkGeo()
-5.  Subset argument (to adjust API call made)
+5.  Subset geo argument (to adjust API call made)
     -   Conditions:
         -   User can specify specific Regions, Divisions, or States.
         -   Only specific levels selected will be returned.
         -   Ensure valid user entries.
-    -   Function: checkSubset()
 
 ### Year
 Year of survey
@@ -165,7 +164,6 @@ Year of survey
 # arguments: yr (integer)
 # returns: TRUE for a successful value, FALSE else (including error)
 # error handling: FALSE for non-int
-
 checkYear <- function(yr) {
 
   #set FALSE if non-int or out of bounds
@@ -180,6 +178,133 @@ checkYear <- function(yr) {
   return(pass)
 }
 ```
+
+### Numeric vars
+-   Default:
+    -   AGEP
+    -   PWGTP (req)
+-   Valid:
+    -   AGEP
+    -   GASP
+    -   GRPIP
+    -   JWAP (time)
+    -   JWDP (time)
+    -   JWMNP
+    -   PWGTP
+-   Conditions:
+    -   Translate variables to numeric or time (middle of period) as applicable.
+    -   At least one numeric var other than PWGTP must be returned.
+    -   Ensure valid user entries.
+-   Function: checkNumVars()
+```{r}
+# function checkNumVars()
+# purpose: Confirm that numeric variable names passed are within the legitimate set.
+# arguments: vars (vector of chars)
+# returns: TRUE for all successful values, FALSE else
+# error handling: none; assumes a vector of characters for expected behavior
+checkNumVars <- function(vars) {
+  
+  #init pass. If it remains TRUE, return will be TRUE (passes check)
+  pass = TRUE
+  
+  #cycle through all values in the vector
+  for (var_i in vars) {
+    
+    #if value of element not in list, toggle pass to FALSE
+    if (!(var_i %in% c('AGEP',
+                       'GASP',
+                       'GRPIP',
+                       'JWAP',
+                       'JWDP',
+                       'JWMNP',
+                       'PWGTP')))
+      pass = FALSE
+  }
+  
+  return(pass)
+}
+```
+
+### Categorical vars
+-   Default:
+    -   SEX
+-   Valid:
+    -   FER
+    -   HHL
+    -   HISPEED
+    -   JWTRNS
+    -   SCH
+    -   SCHL
+    -   SEX
+-   Conditions:
+    -   Translate variables into factors with appropriate levels as applicable.
+    -   At least one categorical variable must be returned.
+    -   Ensure valid user entries.
+-   Function: checkCatVars()
+```{r}
+# function checkCatVars()
+# purpose: Confirm that categorical variable names passed are within the legitimate set.
+# arguments: vars (vector of chars)
+# returns: TRUE for all successful values, FALSE else
+# error handling: none; assumes a vector of characters for expected behavior
+checkCatVars <- function(vars) {
+  
+  #init pass. If it remains TRUE, return will be TRUE (passes check)
+  pass = TRUE
+  
+  #cycle through all values in the vector
+  for (var_i in vars) {
+    
+    #if value of element not in list, toggle pass to FALSE
+    if (!(var_i %in% c('SEX',
+                       'FER',
+                       'HHL',
+                       'HISPEED',
+                       'JWTRNS',
+                       'SCH',
+                       'SCHL')))
+      pass = FALSE
+  }
+  
+  return(pass)
+}
+```
+
+### Geography level
+-   Default:
+    -   All
+-   Valid:
+    -   All
+    -   Region
+    -   Division
+    -   State
+-   Conditions:
+    -   Ensure valid user entries.
+-   Function: checkGeo()
+```{r}
+# function checkGeo()
+# purpose: Confirm that geo selections passed are within the legitimate set.
+# arguments: geo (char string)
+# returns: TRUE for all successful values, FALSE else (includes error)
+# error handling: none; geo must be length 1
+checkGeo <- function(geo) {
+  
+  #set FALSE if longer than 1 or out of bounds
+  if (length(geo) != 1) pass = FALSE
+  else if (geo %in% c('All',
+                      'Region',
+                      'Division',
+                      'State'))
+    pass = TRUE
+  else
+    pass = FALSE
+  
+  #TRUE if valid
+  return(pass)
+
+}
+```
+
 
 
 
