@@ -7,7 +7,7 @@ editor: visual
 
 # Introduction
 
-This project demonstrates use of R for manipulating and processing census datasets via API. Generic functions will auto-summarize and auto-plot returned data. The document will describe how these function and provide examples.
+This project demonstrates the use of R for collecting, processing, and studying US Census data via its API. The data processing functions will allow a variety of fields to be pulled or subset, via their arguments. Data summary functions will auto-summarize and auto-plot the returned data. Lastly, we add commentary and analysis of some points of interest.
 
 # Data Source
 
