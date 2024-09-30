@@ -1171,40 +1171,47 @@ The Census data returns a form of compressed results, where identical rows repre
 
 Savannah!
 
-Making tibble have additional class of "census".
+Adding additional class of "census" to tibble.
 ```{r}
 class(test_results_formatted) <- c("census", class(test_results_formatted))
 ```
 
 ```{r}
-summary.census <- function(test_results_formatted, numeric_variables = NULL, cat_variables = NULL) {
- if(is.null(numeric_variables)) {
-  numeric_variables <- setdiff(numeric_variables, "PWGTP")}
-  
-  if(is.null(cat_variables)) {
-    names(select(test_results_formatted, where(~ !is.numeric(.x))))
+summary.census <- function(test_results_formatted, numVars = NULL, catVars= NULL) {
+ 
+  if(is.null(numVars)) {
+   numVars <- names(select(test_results_formatted, where(is.numeric), -PWGTP))
   }
   
-  numeric_summary <-
-  test_results_formatted |>
-    summarize(across(all_of(numeric_variables),
-                     list(mean = ~ sum(.x * PWGTP) / sum(PWGTP),
-                          sd = ~ sqrt(sum(.x^2 * PWGTP) / sum(PWGTP) - (sum(.x * PWGTP)/ sum(PWGTP))^2)),
-                     .names = "{.col}_{.fn}"))
+  if(is.null(catVars)) {
+    catVars <- names(select(test_results_formatted, -where(is.numeric)))
+  }
   
+  numeric_summary1 <-
+  test_results_formatted |>
+    summarize(across(all_of(numVars),
+                    list(mean = ~ sum(. * PWGTP, na.rm = TRUE) / sum(., na.rm = TRUE)),
+                     .names = "{.col}_mean"))
+              
+  numeric_summary2 <-
+  test_results_formatted |>
+    summarize(across(all_of(numVars),
+       list(sd = ~ sqrt(sum(.^2 * PWGTP, na.rm = TRUE) / (sum(PWGTP, na.rm = TRUE) - (sum(. * PWGTP, na.rm = TRUE) / sum(., na.rm = TRUE))^2))),
+                     .names = "{.col}_sd"))
+
   cat_count <-
   test_results_formatted |>
-    drop_na(all_of(cat_variables)) |> 
-  group_by(across(all_of(cat_variables))) |>
+    drop_na(all_of(catVars)) |> 
+  group_by(across(all_of(catVars))) |>
           summarize(count = n(), .groups = "drop")
 
-results <- list(numeric_summary = numeric_summary, categorial_count = cat_count)
-return(results)
+return(list(mean_summary = numeric_summary1, sd_summary = numeric_summary2, categorial_count = cat_count))
+
 }
 ```
 
 ```{r}
-final_result <- summary.census(test_results_formatted, ,)
+final_result <- summary.census(test_results_formatted,"AGEP", "SEX")
 ```
 
 ```{r}
@@ -1212,9 +1219,14 @@ library(ggplot2)
 ```
 
 ```{r}
-plot_census <- function(census_tibble, num_var, cat_var) {
-  ggplot(data = test_results_formatted,
-aes(x = get(cat_variables), y = get(num_variables), weight = PWGTP)) + geom_boxplot()
+plot_census <- function(census_tibble, numVars, catVars) {
+  ggplot(test_results_formatted,
+aes(x = get(catVars), y = get(numVars), weight = PWGTP)) + geom_boxplot()
 }
 ```
+
+```{r}
+plot_census(census_tibble, "AGEP", "FER")
+```
+
 >>>>>>> origin/main
