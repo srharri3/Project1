@@ -40,35 +40,37 @@ We will follow these steps for data processing:
 More details including valid arguments, etc. will be listed below, as we address each step.
 
 ## Libraries
+
 Ensuring we have the appropriate libraries for the project and task.
+
 ```{r}
-library(jsonlite)
 #to help with parsing contents of API calls
+library(jsonlite)
 
-library(httr)
 #for API URL building
+library(httr)
 
-library(dplyr)
 #for tidy stuff
+library(dplyr)
 ```
 
-
 ## Test call to the Census API
+
 Before we build functions, let's just make a simple call without any API key, to ensure it works as expected.
 
 ```{r}
 #base URL for example: api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR&SCHL=24&key=YOUR_KEY
 test_URL <- "https://api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR,ST&SCHL=24"
 test_results <- GET(test_URL)
-#str(test_results,max.level=1)
 test_parsed_content = fromJSON(rawToChar(test_results$content))
 test_tibble = as_tibble(test_parsed_content)
 test_tibble
 ```
 
-Success! 
+Success!
 
 ## Function from GET to tibble
+
 Now, let's write the helper function that takes a GET result and produces a nice tibble.
 
 ```{r}
@@ -87,9 +89,11 @@ getToTibble <- function(get_results) {
 #check for same end result as original test
 getToTibble(test_results)
 ```
+
 Success!
 
 ## Function to customize API call per user input
+
 This introduces a fair bit of complexity. We want to enable the user to query the API flexibly, as described below. In this function, we will ensure valid selections and query results for a specific year.
 
 To make this manageable, we will use helper functions for tasks like validating arguments.
@@ -151,13 +155,13 @@ To make this manageable, we will use helper functions for tasks like validating 
         -   Only specific levels selected will be returned.
         -   Ensure valid user entries.
 
-### Year
-Year of survey
--   Default:
-    -   2022
--   Valid:
-    -   Integer in \[2010,2022\]
--   Function: checkYear()
+### Check year
+- Default: 
+    - 2022 
+- Valid: 
+    - Integer in \[2010,2022\] 
+- Function: checkYear()
+
 ```{r}
 # function checkYear()
 # purpose: Confirm that passed integer value is within [2010,2022].
@@ -180,6 +184,7 @@ checkYear <- function(yr) {
 ```
 
 ### Numeric vars
+
 -   Default:
     -   AGEP
     -   PWGTP (req)
@@ -196,6 +201,7 @@ checkYear <- function(yr) {
     -   At least one numeric var other than PWGTP must be returned.
     -   Ensure valid user entries.
 -   Function: checkNumVars()
+
 ```{r}
 # function checkNumVars()
 # purpose: Confirm that numeric variable names passed are within the legitimate set.
@@ -226,6 +232,7 @@ checkNumVars <- function(vars) {
 ```
 
 ### Categorical vars
+
 -   Default:
     -   SEX
 -   Valid:
@@ -241,6 +248,7 @@ checkNumVars <- function(vars) {
     -   At least one categorical variable must be returned.
     -   Ensure valid user entries.
 -   Function: checkCatVars()
+
 ```{r}
 # function checkCatVars()
 # purpose: Confirm that categorical variable names passed are within the legitimate set.
@@ -271,6 +279,7 @@ checkCatVars <- function(vars) {
 ```
 
 ### Geography level
+
 -   Default:
     -   All
 -   Valid:
@@ -281,6 +290,7 @@ checkCatVars <- function(vars) {
 -   Conditions:
     -   Ensure valid user entries.
 -   Function: checkGeo()
+
 ```{r}
 # function checkGeo()
 # purpose: Confirm that geo selections passed are within the legitimate set.
@@ -304,9 +314,6 @@ checkGeo <- function(geo) {
 
 }
 ```
-
-
-
 
 4.  Write a function to allow user to specify multiple years of survey data **and** all other options above.
 
