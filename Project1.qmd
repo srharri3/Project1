@@ -315,6 +315,90 @@ checkGeo <- function(geo) {
 }
 ```
 
+### Query Function
+
+This function will build and get the URL with the appropriate elements built into the query string. It will ensure valid arguments first, then build the call, then send it and return the result of the GET command.
+```{r}
+# function queryCensus()
+# purpose: Build and call census API.
+# arguments:
+#     yr: year to query
+#     numVars: vector of chars, 1 or more
+#     catVars: vector of chars, 1 or more
+#     geoLevel: one string matching permitted values
+#     geoSubset: vector of chars, 1 or more, for subset by geoLevel (no restrictions)
+# returns: either NA (if invalid) or result of the GET call
+# error handling: error if any parameters are invalid
+queryCensus <- function(yr = 2022,
+                        numVars = c('AGEP','PWGTP'),
+                        catVars = 'SEX',
+                        geoLevel = 'All',
+                        geoSubset = 17 ) { 
+
+  #validate arguments
+  status <- checkYear(yr) &
+            checkNumVars(numVars) &
+            checkCatVars(catVars) &
+            checkGeo(geoLevel)
+  #if any of these failed, status is now FALSE
+  #if so, exit with NA
+  if (!status) return(NA)
+  
+  #otherwise, proceed and combine strings appropriately for query parameters
+
+  #combine numeric and categorical vars for the get parameter
+  get_param <- paste(paste(numVars,sep = ',',collapse = ','),
+                     ',',
+                     paste(catVars,sep = ',',collapse = ','),
+                     ',',
+                     geoLevelCode,
+                     sep = '',
+                     collapse = ''
+  )
+  
+  #since geo level passed validation, only need to switch 'All' for 'State' if applicable
+  geoLevelCode <- if(geoLevel == 'All') 'State' else geoLevel
+  
+  #prepare subset strings
+  subset_param <- paste(paste(geoSubset,sep = ',',collapse = ','),
+                        sep = '',
+                        collapse = ''
+                        )
+  
+  ###############
+  #this is how to do the state stuff
+  #can remove all the 'ST' garbage above
+  #https://api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR,ST&SCHL=24&for=state:13,14,15,16,17&SCHL=24
+  
+  
+  
+  #base URL for example: api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR&SCHL=24&key=YOUR_KEY
+  #build and call API
+  base_URL1 <- "https://api.census.gov/data/"
+  base_URL2 <- "/acs/acs1/pums?"
+  query_URL <- paste(base_URL1,
+                     yr,
+                     base_URL2,
+                     'get=',
+                     get_param,
+                     '&for=',
+                     geoLevelCode,
+                     ':',
+                     subset_param,
+                     sep = '',
+                     collapse = '')
+  
+  #print(query_URL)
+  
+  query_results <- GET(query_URL)
+  return(query_results)
+}
+```
+
+
+
+
+
 4.  Write a function to allow user to specify multiple years of survey data **and** all other options above.
 
     -   Conditions:
