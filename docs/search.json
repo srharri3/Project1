@@ -1,0 +1,51 @@
+[
+  {
+    "objectID": "Project1.html",
+    "href": "Project1.html",
+    "title": "ST 558 | Project 1 | Team N",
+    "section": "",
+    "text": "This project demonstrates use of R for manipulating and processing census datasets via API. Generic functions will auto-summarize and auto-plot returned data. The document will describe how these function and provide examples."
+  },
+  {
+    "objectID": "Project1.html#resources",
+    "href": "Project1.html#resources",
+    "title": "ST 558 | Project 1 | Team N",
+    "section": "Resources",
+    "text": "Resources\n\nInformation about the PUMS API\nVariable list (2022)\nAPI call examples\nMenu-based API call explorer\nSample: api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR&SCHL=24&key=YOUR_KEY"
+  },
+  {
+    "objectID": "Project1.html#user-choices",
+    "href": "Project1.html#user-choices",
+    "title": "ST 558 | Project 1 | Team N",
+    "section": "User Choices",
+    "text": "User Choices\nUser may choose particular variables or conditions (subsets) to be returned."
+  },
+  {
+    "objectID": "Project1.html#libraries",
+    "href": "Project1.html#libraries",
+    "title": "ST 558 | Project 1 | Team N",
+    "section": "Libraries",
+    "text": "Libraries\nEnsuring we have the appropriate libraries for the project and task.\n\nlibrary(jsonlite)\n#to help with parsing contents of API calls\n\nlibrary(httr)\n#for API URL building\n\nlibrary(dplyr)\n\n\nAttaching package: 'dplyr'\n\n\nThe following objects are masked from 'package:stats':\n\n    filter, lag\n\n\nThe following objects are masked from 'package:base':\n\n    intersect, setdiff, setequal, union\n\n#for tidy stuff"
+  },
+  {
+    "objectID": "Project1.html#test-call-to-the-census-api",
+    "href": "Project1.html#test-call-to-the-census-api",
+    "title": "ST 558 | Project 1 | Team N",
+    "section": "Test call to the Census API",
+    "text": "Test call to the Census API\nBefore we build functions, let’s just make a simple call without any API key, to ensure it works as expected.\n\n#base URL for example: api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR&SCHL=24&key=YOUR_KEY\ntest_URL &lt;- \"https://api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR,ST&SCHL=24\"\ntest_results &lt;- GET(test_URL)\n#str(test_results,max.level=1)\ntest_parsed_content = fromJSON(rawToChar(test_results$content))\ntest_tibble = as_tibble(test_parsed_content)\n\nWarning: The `x` argument of `as_tibble.matrix()` must have unique column names if\n`.name_repair` is omitted as of tibble 2.0.0.\nℹ Using compatibility `.name_repair`.\n\ntest_tibble\n\n# A tibble: 44,080 × 5\n   V1    V2    V3    V4    V5   \n   &lt;chr&gt; &lt;chr&gt; &lt;chr&gt; &lt;chr&gt; &lt;chr&gt;\n 1 SEX   PWGTP MAR   ST    SCHL \n 2 2     6     5     17    24   \n 3 2     23    2     06    24   \n 4 1     23    3     42    24   \n 5 1     80    5     49    24   \n 6 1     16    1     18    24   \n 7 1     107   3     18    24   \n 8 2     10    5     13    24   \n 9 1     22    1     39    24   \n10 2     127   5     32    24   \n# ℹ 44,070 more rows\n\n\nSuccess!"
+  },
+  {
+    "objectID": "Project1.html#function-from-get-to-tibble",
+    "href": "Project1.html#function-from-get-to-tibble",
+    "title": "ST 558 | Project 1 | Team N",
+    "section": "Function from GET to tibble",
+    "text": "Function from GET to tibble\nNow, let’s write the helper function that takes a GET result and produces a nice tibble.\n\n# function getToTibble\n# purpose: Take results from a Census GET call, which come back with raw JSON, and transform them into a usable tibble that shows only the retrieved content in a friendly format.\n# arguments: get_results (the result of a prior call to GET() on the Census API)\n# returns: tibble corresponding to the parsed, json, raw to char 'content' element of the original GET result\n# error handling: none; only call this function when a valid argument is ready\ngetToTibble &lt;- function(get_results) {\n  parsed_results = fromJSON(rawToChar(get_results$content))\n  tibble_results = as_tibble(parsed_results)\n  return(tibble_results)\n\n}\n\n#check for same end result as original test\ngetToTibble(test_results)\n\n# A tibble: 44,080 × 5\n   V1    V2    V3    V4    V5   \n   &lt;chr&gt; &lt;chr&gt; &lt;chr&gt; &lt;chr&gt; &lt;chr&gt;\n 1 SEX   PWGTP MAR   ST    SCHL \n 2 2     6     5     17    24   \n 3 2     23    2     06    24   \n 4 1     23    3     42    24   \n 5 1     80    5     49    24   \n 6 1     16    1     18    24   \n 7 1     107   3     18    24   \n 8 2     10    5     13    24   \n 9 1     22    1     39    24   \n10 2     127   5     32    24   \n# ℹ 44,070 more rows\n\n\nSuccess!"
+  },
+  {
+    "objectID": "Project1.html#function-to-customize-api-call-per-user-input",
+    "href": "Project1.html#function-to-customize-api-call-per-user-input",
+    "title": "ST 558 | Project 1 | Team N",
+    "section": "Function to customize API call per user input",
+    "text": "Function to customize API call per user input\nThis introduces a fair bit of complexity. We want to enable the user to query the API flexibly, as described below. In this function, we will ensure valid selections and query results for a specific year.\nTo make this\nNote also that we will include and limit by default to a single ST (state) category, as mentioned in headers. Because 14 is not a valid state in the dataset, we will use the 14th available label, corresponding to ST=17 Illinois/IL. See ST list.\n\nYear of survey\n\nDefault:\n\n2022\n\nValid:\n\nInteger in [2010,2022]\n\n\nNumeric var(s) to return\n\nDefault:\n\nAGEP\nPWGTP (req)\n\nValid:\n\nAGEP\nGASP\nGRPIP\nJWAP (time)\nJWDP (time)\nJWMNP\n\nConditions:\n\nTranslate variables to numeric or time (middle of period) as applicable.\nAt least one numeric var other than PWGTP must be returned.\nEnsure valid user entries.\n\n\nCategorical var(s) to return\n\nDefault:\n\nSEX\n\nValid:\n\nFER\nHHL\nHISPEED\nJWTRNS\nSCH\nSCHL\nSEX\n\nConditions:\n\nTranslate variables into factors with appropriate levels as applicable.\nAt least one categorical variable must be returned.\nEnsure valid user entries.\n\n\nGeography level\n\nDefault:\n\nAll\n\nValid:\n\nAll\nRegion\nDivision\nState\n\nConditions:\n\nEnsure valid user entries.\n\n\nSubset argument (to adjust API call made)\n\nConditions:\n\nUser can specify specific Regions, Divisions, or States.\nOnly specific levels selected will be returned.\nEnsure valid user entries.\n\n\nWrite a function to allow user to specify multiple years of survey data and all other options above.\n\nConditions:\n\nCall single year function repeatedly as needed.\nCombine data into one final tibble, including year variable."
+  }
+]
