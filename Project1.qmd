@@ -494,26 +494,16 @@ formatResults <- function(results,year=2022) {
   #loop through all possible vars requiring update
   #if it exists in our tibble as a column, mutate the column type appropriately
   for (varName in all_variables) {
-#print(varName)    
+  
     #loop through all columns in tibble
     for (colName in names(results)) {
-#print(colName)      
+
       #if a match 
       if (varName == colName) {
         
-        #get lookup data
-        #print(paste("calling get Lookup with vars:",varName,year))
-        print(results[varName])
-        #str(results[varName])
-        #str(varName)
         #for a numeric type, swap its contents to numeric
         if (varName %in% numeric_variables) {
           results[varName] <- as.numeric(results[[varName]])
-          print(as.numeric(results[[varName]]))
-          print(varName)
-          print(results[varName])
-          results[varName] <- mutate(results[varName],varName = as.numeric(results[[varName]]))
-          print(head(results))
         }
         
         #for a time type, swap its contents to numeric
@@ -523,20 +513,17 @@ formatResults <- function(results,year=2022) {
           #revise values 
 #        }
         
-        #for a cate type, swap its contents from index to label 
+        #for a categ type, swap its contents from index to label 
         if (varName %in% cat_variables) {
-          #results |> mutate(varName = as.numeric(results[varName]))
           
-          #make a temp join but only keep the lookup
+          #make a temp join but only keep the replaced char labels in the result column
           lookup <- getLookup(varName,year)
           temp <- results[varName]
           names(temp)='name'
-          print(temp)
-          print(varName)
-          print(lookup)
           temp_join <- left_join(temp,lookup,by=join_by(name == name))
-return(temp_join)
+
           #revise values 
+          results[varName] <- temp_join$value
         }
                                       
                               
@@ -549,6 +536,32 @@ return(temp_join)
     
   }
   
+  #special handling for geo lookup, because in function call previously it doesn't like it 
+
+  #make a temp join but only keep the replaced char labels in the result column
+  if("Region" %in% names(results)) {
+    geoLevel <- "Region"
+    geoLevel_query <- "REGION"
+  }
+  else if("Division" %in% names(results)) {
+    geoLevel <- "Division"
+    geoLevel_query <- "DIVISION"
+  }
+  else {
+    geoLevel <- "State"
+    geoLevel_query <- "ST"
+  }
+
+  lookup <- getLookup(geoLevel_query,year)
+  temp <- results[geoLevel]
+  names(temp)='name'
+  temp_join <- left_join(temp,lookup,by=join_by(name == name))
+  
+  #revise values 
+  results[geoLevel] <- temp_join$value
+  
+  
+  return(results)
 }
 
 
@@ -1103,8 +1116,9 @@ schl - Educational attainment
 Now, let's run some sample calls.
 
 ```{r}
+year=2022
 test_results <- getToTibble(
-  queryCensus(yr=2022,catVars=c('SEX','HISPEED'),geoLevel='Division',geoSubset = 2,numVars=c('AGEP','PWGTP','GASP'))
+  queryCensus(year,catVars=c('SEX','HISPEED'),geoLevel='Division',geoSubset = 2,numVars=c('AGEP','PWGTP','GASP'))
 )
 test_results
 ```
@@ -1115,6 +1129,17 @@ test_results
 Success!
 
 *Note that if syntax changes or limitations exist for other years of data (for instance, say 'HISPEED' was not available in year X), requests may fail.*
+
+Now, let's try using the formatting function to replace categorical variables and make numeric into numbers.
+```{r}
+test_results_formatted <- formatResults(test_results,year)
+
+
+```
+```{r}
+test_results_formatted
+```
+
 
 
 4.  Write a function to allow user to specify multiple years of survey data **and** all other options above.
