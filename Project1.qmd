@@ -47,6 +47,9 @@ library(jsonlite)
 
 library(httr)
 #for API URL building
+
+library(dplyr)
+#for tidy stuff
 ```
 
 
@@ -55,65 +58,97 @@ Before we build functions, let's just make a simple call without any API key, to
 
 ```{r}
 #base URL for example: api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR&SCHL=24&key=YOUR_KEY
-URL_ids <- "api.census.gov/data/2022/acs/acs1/pums"
-testinfo <- GET(URL_ids)
-str(testinfo,max.level=1)
+test_URL <- "https://api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR,ST&SCHL=24"
+test_results <- GET(test_URL)
+#str(test_results,max.level=1)
+test_parsed_content = fromJSON(rawToChar(test_results$content))
+test_tibble = as_tibble(test_parsed_content)
+test_tibble
 ```
 
+Success! 
+
+## Function from GET to tibble
+Now, let's write the helper function that takes a GET result and produces a nice tibble.
+
+```{r}
+# function getToTibble
+# purpose: Take results from a Census GET call, which come back with raw JSON, and transform them into a usable tibble that shows only the retrieved content in a friendly format.
+# arguments: get_results (the result of a prior call to GET() on the Census API)
+# returns: tibble corresponding to the parsed, json, raw to char 'content' element of the original GET result
+# error handling: none; only call this function when a valid argument is ready
+getToTibble <- function(get_results) {
+  parsed_results = fromJSON(rawToChar(get_results$content))
+  tibble_results = as_tibble(parsed_results)
+  return(tibble_results)
+
+}
+
+#check for same end result as original test
+getToTibble(test_results)
+```
+Success!
+
+## Function to customize API call per user input
+This introduces a fair bit of complexity. We want to enable the user to query the API flexibly, as described below. In this function, we will ensure valid selections and query results for a specific year.
+
+To make this 
+
+*Note also that we will include and limit by default to a single ST (state) category, as mentioned in headers. Because `14` is not a valid state in the dataset, we will use the 14th available label, corresponding to ST=17 Illinois/IL. See [ST list](https://api.census.gov/data/2022/acs/acs1/pums/variables/ST.json).*
+
+1.  Year of survey
+    -   Default:
+        -   2022
+    -   Valid:
+        -   Integer in \[2010,2022\]
+2.  Numeric var(s) to return
+    -   Default:
+        -   AGEP
+        -   PWGTP (req)
+    -   Valid:
+        -   AGEP
+        -   GASP
+        -   GRPIP
+        -   JWAP (time)
+        -   JWDP (time)
+        -   JWMNP
+    -   Conditions:
+        -   Translate variables to numeric or time (middle of period) as applicable.
+        -   At least one numeric var other than PWGTP must be returned.
+        -   Ensure valid user entries.
+3.  Categorical var(s) to return
+    -   Default:
+        -   SEX
+    -   Valid:
+        -   FER
+        -   HHL
+        -   HISPEED
+        -   JWTRNS
+        -   SCH
+        -   SCHL
+        -   SEX
+    -   Conditions:
+        -   Translate variables into factors with appropriate levels as applicable.
+        -   At least one categorical variable must be returned.
+        -   Ensure valid user entries.
+4.  Geography level
+    -   Default:
+        -   All
+    -   Valid:
+        -   All
+        -   Region
+        -   Division
+        -   State
+    -   Conditions:
+        -   Ensure valid user entries.
+5.  Subset argument (to adjust API call made)
+    -   Conditions:
+        -   User can specify specific Regions, Divisions, or States.
+        -   Only specific levels selected will be returned.
+        -   Ensure valid user entries.
 
 
-3.  Write a function to query API, with editable parameters:
 
-    1.  Year of survey
-        -   Default:
-            -   2022
-        -   Valid:
-            -   Integer in \[2010,2022\]
-    2.  Numeric var(s) to return
-        -   Default:
-            -   AGEP
-            -   PWGTP (req)
-        -   Valid:
-            -   AGEP
-            -   GASP
-            -   GRPIP
-            -   JWAP (time)
-            -   JWDP (time)
-            -   JWMNP
-        -   Conditions:
-            -   Translate variables to numeric or time (middle of period) as applicable.
-            -   At least one numeric var other than PWGTP must be returned.
-            -   Ensure valid user entries.
-    3.  Categorical var(s) to return
-        -   Default:
-            -   SEX
-        -   Valid:
-            -   FER
-            -   HHL
-            -   HISPEED
-            -   JWTRNS
-            -   SCH
-            -   SCHL
-            -   SEX
-        -   Conditions:
-            -   Translate variables into factors with appropriate levels as applicable.
-            -   At least one categorical variable must be returned.
-            -   Ensure valid user entries.
-    4.  Geography level
-        -   Default:
-            -   All
-        -   Valid:
-            -   All
-            -   Region
-            -   Division
-            -   State
-        -   Conditions:
-            -   Ensure valid user entries.
-    5.  Subset argument (to adjust API call made)
-        -   Conditions:
-            -   User can specify specific Regions, Divisions, or States.
-            -   Only specific levels selected will be returned.
-            -   Ensure valid user entries.
 
 4.  Write a function to allow user to specify multiple years of survey data **and** all other options above.
 

@@ -6,8 +6,9 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
+<meta name="author" content="Savannah Harrison, Andy Powers">
 
-<title>Project 1 Team N</title>
+<title>ST 558 | Project 1 | Team N</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -19,6 +20,40 @@ ul.task-list li input[type="checkbox"] {
   width: 0.8em;
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
 </style>
 
@@ -82,13 +117,19 @@ ul.task-list li input[type="checkbox"] {
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">Project 1 Team N</h1>
+<h1 class="title">ST 558 | Project 1 | Team N</h1>
 </div>
 
 
 
 <div class="quarto-title-meta">
 
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Savannah Harrison, Andy Powers </p>
+          </div>
+  </div>
     
   
     
@@ -99,8 +140,249 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 
+<section id="introduction" class="level1">
+<h1>Introduction</h1>
+<p>This project demonstrates use of R for manipulating and processing census datasets via API. Generic functions will auto-summarize and auto-plot returned data. The document will describe how these function and provide examples.</p>
+</section>
+<section id="data-source" class="level1">
+<h1>Data Source</h1>
+<p>We will query the <em>Public Use Microdata Sample (PUMS) Census API</em>. The API offers <em>pseudo person-level</em> data. To demonstrate our functions while avoiding memory errors, we will default to a subset of state 14 data. Users may adjust this within our function calls.</p>
+<section id="resources" class="level2">
+<h2 class="anchored" data-anchor-id="resources">Resources</h2>
+<ul>
+<li><a href="https://www.census.gov/data/developers/data-sets/census-microdata-api.html">Information about the PUMS API</a></li>
+<li><a href="https://api.census.gov/data/2022/acs/acs1/pums/variables.html">Variable list (2022)</a></li>
+<li><a href="https://api.census.gov/data/2022/acs/acs1/pums/examples.html">API call examples</a></li>
+<li><a href="https://data.census.gov/mdat/#/">Menu-based API call explorer</a></li>
+<li>Sample: <code>api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR&amp;SCHL=24&amp;key=YOUR_KEY</code></li>
+</ul>
+</section>
+<section id="user-choices" class="level2">
+<h2 class="anchored" data-anchor-id="user-choices">User Choices</h2>
+<p>User may choose particular variables or conditions (subsets) to be returned.</p>
+</section>
+</section>
+<section id="data-processing" class="level1">
+<h1>Data Processing</h1>
+<p>We will follow these steps for data processing:</p>
+<ol type="1">
+<li><p>Achieve a basic call to a sample API endpoint, returning a tibble.</p></li>
+<li><p>Write a <em>helper</em> function to take the return from <code>GET()</code> and modify it into a <code>tibble</code>.</p></li>
+<li><p>Write a function to query API, with editable parameters.</p></li>
+<li><p>Write a function to allow user to specify multiple years of survey data <strong>and</strong> all other options above.</p></li>
+</ol>
+<p>More details including valid arguments, etc. will be listed below, as we address each step.</p>
+<section id="libraries" class="level2">
+<h2 class="anchored" data-anchor-id="libraries">Libraries</h2>
+<p>Ensuring we have the appropriate libraries for the project and task.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(jsonlite)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="co">#to help with parsing contents of API calls</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(httr)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co">#for API URL building</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Attaching package: 'dplyr'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following objects are masked from 'package:stats':
+
+    filter, lag</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following objects are masked from 'package:base':
+
+    intersect, setdiff, setequal, union</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co">#for tidy stuff</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="test-call-to-the-census-api" class="level2">
+<h2 class="anchored" data-anchor-id="test-call-to-the-census-api">Test call to the Census API</h2>
+<p>Before we build functions, let’s just make a simple call without any API key, to ensure it works as expected.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co">#base URL for example: api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR&amp;SCHL=24&amp;key=YOUR_KEY</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>test_URL <span class="ot">&lt;-</span> <span class="st">"https://api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR,ST&amp;SCHL=24"</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>test_results <span class="ot">&lt;-</span> <span class="fu">GET</span>(test_URL)</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co">#str(test_results,max.level=1)</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>test_parsed_content <span class="ot">=</span> <span class="fu">fromJSON</span>(<span class="fu">rawToChar</span>(test_results<span class="sc">$</span>content))</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>test_tibble <span class="ot">=</span> <span class="fu">as_tibble</span>(test_parsed_content)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: The `x` argument of `as_tibble.matrix()` must have unique column names if
+`.name_repair` is omitted as of tibble 2.0.0.
+ℹ Using compatibility `.name_repair`.</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>test_tibble</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 44,080 × 5
+   V1    V2    V3    V4    V5   
+   &lt;chr&gt; &lt;chr&gt; &lt;chr&gt; &lt;chr&gt; &lt;chr&gt;
+ 1 SEX   PWGTP MAR   ST    SCHL 
+ 2 2     6     5     17    24   
+ 3 2     23    2     06    24   
+ 4 1     23    3     42    24   
+ 5 1     80    5     49    24   
+ 6 1     16    1     18    24   
+ 7 1     107   3     18    24   
+ 8 2     10    5     13    24   
+ 9 1     22    1     39    24   
+10 2     127   5     32    24   
+# ℹ 44,070 more rows</code></pre>
+</div>
+</div>
+<p>Success!</p>
+</section>
+<section id="function-from-get-to-tibble" class="level2">
+<h2 class="anchored" data-anchor-id="function-from-get-to-tibble">Function from GET to tibble</h2>
+<p>Now, let’s write the helper function that takes a GET result and produces a nice tibble.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># function getToTibble</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="co"># purpose: Take results from a Census GET call, which come back with raw JSON, and transform them into a usable tibble that shows only the retrieved content in a friendly format.</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="co"># arguments: get_results (the result of a prior call to GET() on the Census API)</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="co"># returns: tibble corresponding to the parsed, json, raw to char 'content' element of the original GET result</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="co"># error handling: none; only call this function when a valid argument is ready</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>getToTibble <span class="ot">&lt;-</span> <span class="cf">function</span>(get_results) {</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  parsed_results <span class="ot">=</span> <span class="fu">fromJSON</span>(<span class="fu">rawToChar</span>(get_results<span class="sc">$</span>content))</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>  tibble_results <span class="ot">=</span> <span class="fu">as_tibble</span>(parsed_results)</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(tibble_results)</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a><span class="co">#check for same end result as original test</span></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a><span class="fu">getToTibble</span>(test_results)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 44,080 × 5
+   V1    V2    V3    V4    V5   
+   &lt;chr&gt; &lt;chr&gt; &lt;chr&gt; &lt;chr&gt; &lt;chr&gt;
+ 1 SEX   PWGTP MAR   ST    SCHL 
+ 2 2     6     5     17    24   
+ 3 2     23    2     06    24   
+ 4 1     23    3     42    24   
+ 5 1     80    5     49    24   
+ 6 1     16    1     18    24   
+ 7 1     107   3     18    24   
+ 8 2     10    5     13    24   
+ 9 1     22    1     39    24   
+10 2     127   5     32    24   
+# ℹ 44,070 more rows</code></pre>
+</div>
+</div>
+<p>Success!</p>
+</section>
+<section id="function-to-customize-api-call-per-user-input" class="level2">
+<h2 class="anchored" data-anchor-id="function-to-customize-api-call-per-user-input">Function to customize API call per user input</h2>
+<p>This introduces a fair bit of complexity. We want to enable the user to query the API flexibly, as described below. In this function, we will ensure valid selections and query results for a specific year.</p>
+<p>To make this</p>
+<p><em>Note also that we will include and limit by default to a single ST (state) category, as mentioned in headers. Because <code>14</code> is not a valid state in the dataset, we will use the 14th available label, corresponding to ST=17 Illinois/IL. See <a href="https://api.census.gov/data/2022/acs/acs1/pums/variables/ST.json">ST list</a>.</em></p>
+<ol type="1">
+<li><p>Year of survey</p>
+<ul>
+<li>Default:
+<ul>
+<li>2022</li>
+</ul></li>
+<li>Valid:
+<ul>
+<li>Integer in [2010,2022]</li>
+</ul></li>
+</ul></li>
+<li><p>Numeric var(s) to return</p>
+<ul>
+<li>Default:
+<ul>
+<li>AGEP</li>
+<li>PWGTP (req)</li>
+</ul></li>
+<li>Valid:
+<ul>
+<li>AGEP</li>
+<li>GASP</li>
+<li>GRPIP</li>
+<li>JWAP (time)</li>
+<li>JWDP (time)</li>
+<li>JWMNP</li>
+</ul></li>
+<li>Conditions:
+<ul>
+<li>Translate variables to numeric or time (middle of period) as applicable.</li>
+<li>At least one numeric var other than PWGTP must be returned.</li>
+<li>Ensure valid user entries.</li>
+</ul></li>
+</ul></li>
+<li><p>Categorical var(s) to return</p>
+<ul>
+<li>Default:
+<ul>
+<li>SEX</li>
+</ul></li>
+<li>Valid:
+<ul>
+<li>FER</li>
+<li>HHL</li>
+<li>HISPEED</li>
+<li>JWTRNS</li>
+<li>SCH</li>
+<li>SCHL</li>
+<li>SEX</li>
+</ul></li>
+<li>Conditions:
+<ul>
+<li>Translate variables into factors with appropriate levels as applicable.</li>
+<li>At least one categorical variable must be returned.</li>
+<li>Ensure valid user entries.</li>
+</ul></li>
+</ul></li>
+<li><p>Geography level</p>
+<ul>
+<li>Default:
+<ul>
+<li>All</li>
+</ul></li>
+<li>Valid:
+<ul>
+<li>All</li>
+<li>Region</li>
+<li>Division</li>
+<li>State</li>
+</ul></li>
+<li>Conditions:
+<ul>
+<li>Ensure valid user entries.</li>
+</ul></li>
+</ul></li>
+<li><p>Subset argument (to adjust API call made)</p>
+<ul>
+<li>Conditions:
+<ul>
+<li>User can specify specific Regions, Divisions, or States.</li>
+<li>Only specific levels selected will be returned.</li>
+<li>Ensure valid user entries.</li>
+</ul></li>
+</ul></li>
+<li><p>Write a function to allow user to specify multiple years of survey data <strong>and</strong> all other options above.</p>
+<ul>
+<li>Conditions:
+<ul>
+<li>Call single year function repeatedly as needed.</li>
+<li>Combine data into one final tibble, including <code>year</code> variable.</li>
+</ul></li>
+</ul></li>
+</ol>
+</section>
+</section>
+<section id="person-level-records" class="level1">
+<h1>Person Level Records</h1>
+<p>The Census data returns a form of compressed results, where identical rows representing multiple people are condensed to one row with the field <code>PWGTP</code> representing the number of observations (people) associated with that row. We will not replicate these rows to keep our table smaller and simpler, but it must be considered for data summarization to ensure proper proportions are understood.</p>
+</section>
+<section id="summarizing" class="level1">
+<h1>Summarizing…</h1>
+<p>Savannah!</p>
 
 
+</section>
 
 </main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
