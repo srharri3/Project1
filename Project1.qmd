@@ -5,29 +5,37 @@ library(dplyr)
 
 Making tibble have additional class of "census".
 ```{r}
-class(tibble) <- c("census", class(tibble))
+class(census_tibble) <- c("census", class(census_tibble))
 ```
 
 ```{r}
-summary.census <- function(tibble, num_vars = , cat_vars = ) {
-  if (num_var ! PWGTP) {
-    sample_mean <- sum(numeric_vector*weight_vector)/sum(weight_vector)
-    sample_sd <- sqrt(sum(numeric_vectorˆ2*weight_vector)/sum(weight_vector)-sample_meanˆ2)} 
-  if (cat_var) <- count
+summary.census <- function(census_tibble, num_vars = NULL, cat_vars = NULL) {
+  num_summary <-
+  census_tibble |>
+    summarize(across(where(is.numeric != "PWGTP"),
+                     list("mean" = ~sum(var*weight_vector)/sum(weight_vector),
+                          "sd" = ~sqrt(sum(var^2*weight_vector)/sum(weight_vector)-sample_mean^2))))
   
-  
-  return(list(result = tibble, sample_mean = mean, sample_sd = sd))
+  cat_count <-
+  census_tibble |>
+  group_by(!!sym(var)) |>
+  summarize(count = n())
 }
+
+result <- list(numeric_summary = num_summary, catagorical_count = cat_count)
 ```
 
 ```{r}
-summary(tibbble)
+summary(census_tibble)
 ```
 
 ```{r}
-plot.census <- function(tibble, num_var, cat_var) {
-  library(ggplot2) # put this in your setup code chunk 
-  ggplot(_your_census_tibble_or_modification_,
+library(ggplot2)
+```
+
+```{r}
+plot.census <- function(census_tibble, num_var, cat_var) {
+  ggplot(data = _your_census_tibble_or_modification_,
 aes(x = get(cat_var), y = get(num_var), weight = PWGTP)) + geom_boxplot()
 }
 ```
