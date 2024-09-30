@@ -350,8 +350,6 @@ queryCensus <- function(yr = 2022,
   get_param <- paste(paste(numVars,sep = ',',collapse = ','),
                      ',',
                      paste(catVars,sep = ',',collapse = ','),
-                     ',',
-                     geoLevelCode,
                      sep = '',
                      collapse = ''
   )
@@ -395,8 +393,28 @@ queryCensus <- function(yr = 2022,
 }
 ```
 
+### Field vectorization function
+Here, we need to adjust times and categories into ideal display values in our tibble. For instance, 'HISPEED' has three values 0,1,2 which correspond to N/A, Yes, No. We need to transform columns like this, accordingly.
+
+################ 
+DO MORE STUFF HERE
+################
 
 
+
+## Validating query function (single year)
+Now, let's run some sample calls.
+
+```{r}
+test_results <- getToTibble(
+  queryCensus(yr=2022,catVars=c('SEX','HISPEED'),geoLevel='Division',geoSubset = 2,numVars=c('AGEP','PWGTP','GASP'))
+)
+test_results
+```
+
+Success!
+
+*Note that if syntax changes or limitations exist for other years of data (for instance, say 'HISPEED' was not available in year X), requests may fail.*
 
 
 4.  Write a function to allow user to specify multiple years of survey data **and** all other options above.

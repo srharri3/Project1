@@ -588,50 +588,85 @@ Attaching package: 'dplyr'</code></pre>
 <span id="cb15-29"><a href="#cb15-29" aria-hidden="true" tabindex="-1"></a>  get_param <span class="ot">&lt;-</span> <span class="fu">paste</span>(<span class="fu">paste</span>(numVars,<span class="at">sep =</span> <span class="st">','</span>,<span class="at">collapse =</span> <span class="st">','</span>),</span>
 <span id="cb15-30"><a href="#cb15-30" aria-hidden="true" tabindex="-1"></a>                     <span class="st">','</span>,</span>
 <span id="cb15-31"><a href="#cb15-31" aria-hidden="true" tabindex="-1"></a>                     <span class="fu">paste</span>(catVars,<span class="at">sep =</span> <span class="st">','</span>,<span class="at">collapse =</span> <span class="st">','</span>),</span>
-<span id="cb15-32"><a href="#cb15-32" aria-hidden="true" tabindex="-1"></a>                     <span class="st">','</span>,</span>
-<span id="cb15-33"><a href="#cb15-33" aria-hidden="true" tabindex="-1"></a>                     geoLevelCode,</span>
-<span id="cb15-34"><a href="#cb15-34" aria-hidden="true" tabindex="-1"></a>                     <span class="at">sep =</span> <span class="st">''</span>,</span>
-<span id="cb15-35"><a href="#cb15-35" aria-hidden="true" tabindex="-1"></a>                     <span class="at">collapse =</span> <span class="st">''</span></span>
-<span id="cb15-36"><a href="#cb15-36" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb15-37"><a href="#cb15-37" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb15-38"><a href="#cb15-38" aria-hidden="true" tabindex="-1"></a>  <span class="co">#since geo level passed validation, only need to switch 'All' for 'State' if applicable</span></span>
-<span id="cb15-39"><a href="#cb15-39" aria-hidden="true" tabindex="-1"></a>  geoLevelCode <span class="ot">&lt;-</span> <span class="cf">if</span>(geoLevel <span class="sc">==</span> <span class="st">'All'</span>) <span class="st">'State'</span> <span class="cf">else</span> geoLevel</span>
-<span id="cb15-40"><a href="#cb15-40" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb15-41"><a href="#cb15-41" aria-hidden="true" tabindex="-1"></a>  <span class="co">#prepare subset strings</span></span>
-<span id="cb15-42"><a href="#cb15-42" aria-hidden="true" tabindex="-1"></a>  subset_param <span class="ot">&lt;-</span> <span class="fu">paste</span>(<span class="fu">paste</span>(geoSubset,<span class="at">sep =</span> <span class="st">','</span>,<span class="at">collapse =</span> <span class="st">','</span>),</span>
-<span id="cb15-43"><a href="#cb15-43" aria-hidden="true" tabindex="-1"></a>                        <span class="at">sep =</span> <span class="st">''</span>,</span>
-<span id="cb15-44"><a href="#cb15-44" aria-hidden="true" tabindex="-1"></a>                        <span class="at">collapse =</span> <span class="st">''</span></span>
-<span id="cb15-45"><a href="#cb15-45" aria-hidden="true" tabindex="-1"></a>                        )</span>
-<span id="cb15-46"><a href="#cb15-46" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb15-47"><a href="#cb15-47" aria-hidden="true" tabindex="-1"></a>  <span class="do">###############</span></span>
-<span id="cb15-48"><a href="#cb15-48" aria-hidden="true" tabindex="-1"></a>  <span class="co">#this is how to do the state stuff</span></span>
-<span id="cb15-49"><a href="#cb15-49" aria-hidden="true" tabindex="-1"></a>  <span class="co">#can remove all the 'ST' garbage above</span></span>
-<span id="cb15-50"><a href="#cb15-50" aria-hidden="true" tabindex="-1"></a>  <span class="co">#https://api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR,ST&amp;SCHL=24&amp;for=state:13,14,15,16,17&amp;SCHL=24</span></span>
+<span id="cb15-32"><a href="#cb15-32" aria-hidden="true" tabindex="-1"></a>                     <span class="at">sep =</span> <span class="st">''</span>,</span>
+<span id="cb15-33"><a href="#cb15-33" aria-hidden="true" tabindex="-1"></a>                     <span class="at">collapse =</span> <span class="st">''</span></span>
+<span id="cb15-34"><a href="#cb15-34" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb15-35"><a href="#cb15-35" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb15-36"><a href="#cb15-36" aria-hidden="true" tabindex="-1"></a>  <span class="co">#since geo level passed validation, only need to switch 'All' for 'State' if applicable</span></span>
+<span id="cb15-37"><a href="#cb15-37" aria-hidden="true" tabindex="-1"></a>  geoLevelCode <span class="ot">&lt;-</span> <span class="cf">if</span>(geoLevel <span class="sc">==</span> <span class="st">'All'</span>) <span class="st">'State'</span> <span class="cf">else</span> geoLevel</span>
+<span id="cb15-38"><a href="#cb15-38" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb15-39"><a href="#cb15-39" aria-hidden="true" tabindex="-1"></a>  <span class="co">#prepare subset strings</span></span>
+<span id="cb15-40"><a href="#cb15-40" aria-hidden="true" tabindex="-1"></a>  subset_param <span class="ot">&lt;-</span> <span class="fu">paste</span>(<span class="fu">paste</span>(geoSubset,<span class="at">sep =</span> <span class="st">','</span>,<span class="at">collapse =</span> <span class="st">','</span>),</span>
+<span id="cb15-41"><a href="#cb15-41" aria-hidden="true" tabindex="-1"></a>                        <span class="at">sep =</span> <span class="st">''</span>,</span>
+<span id="cb15-42"><a href="#cb15-42" aria-hidden="true" tabindex="-1"></a>                        <span class="at">collapse =</span> <span class="st">''</span></span>
+<span id="cb15-43"><a href="#cb15-43" aria-hidden="true" tabindex="-1"></a>                        )</span>
+<span id="cb15-44"><a href="#cb15-44" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb15-45"><a href="#cb15-45" aria-hidden="true" tabindex="-1"></a>  <span class="do">###############</span></span>
+<span id="cb15-46"><a href="#cb15-46" aria-hidden="true" tabindex="-1"></a>  <span class="co">#this is how to do the state stuff</span></span>
+<span id="cb15-47"><a href="#cb15-47" aria-hidden="true" tabindex="-1"></a>  <span class="co">#can remove all the 'ST' garbage above</span></span>
+<span id="cb15-48"><a href="#cb15-48" aria-hidden="true" tabindex="-1"></a>  <span class="co">#https://api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR,ST&amp;SCHL=24&amp;for=state:13,14,15,16,17&amp;SCHL=24</span></span>
+<span id="cb15-49"><a href="#cb15-49" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb15-50"><a href="#cb15-50" aria-hidden="true" tabindex="-1"></a>  </span>
 <span id="cb15-51"><a href="#cb15-51" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb15-52"><a href="#cb15-52" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb15-53"><a href="#cb15-53" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb15-54"><a href="#cb15-54" aria-hidden="true" tabindex="-1"></a>  <span class="co">#base URL for example: api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR&amp;SCHL=24&amp;key=YOUR_KEY</span></span>
-<span id="cb15-55"><a href="#cb15-55" aria-hidden="true" tabindex="-1"></a>  <span class="co">#build and call API</span></span>
-<span id="cb15-56"><a href="#cb15-56" aria-hidden="true" tabindex="-1"></a>  base_URL1 <span class="ot">&lt;-</span> <span class="st">"https://api.census.gov/data/"</span></span>
-<span id="cb15-57"><a href="#cb15-57" aria-hidden="true" tabindex="-1"></a>  base_URL2 <span class="ot">&lt;-</span> <span class="st">"/acs/acs1/pums?"</span></span>
-<span id="cb15-58"><a href="#cb15-58" aria-hidden="true" tabindex="-1"></a>  query_URL <span class="ot">&lt;-</span> <span class="fu">paste</span>(base_URL1,</span>
-<span id="cb15-59"><a href="#cb15-59" aria-hidden="true" tabindex="-1"></a>                     yr,</span>
-<span id="cb15-60"><a href="#cb15-60" aria-hidden="true" tabindex="-1"></a>                     base_URL2,</span>
-<span id="cb15-61"><a href="#cb15-61" aria-hidden="true" tabindex="-1"></a>                     <span class="st">'get='</span>,</span>
-<span id="cb15-62"><a href="#cb15-62" aria-hidden="true" tabindex="-1"></a>                     get_param,</span>
-<span id="cb15-63"><a href="#cb15-63" aria-hidden="true" tabindex="-1"></a>                     <span class="st">'&amp;for='</span>,</span>
-<span id="cb15-64"><a href="#cb15-64" aria-hidden="true" tabindex="-1"></a>                     geoLevelCode,</span>
-<span id="cb15-65"><a href="#cb15-65" aria-hidden="true" tabindex="-1"></a>                     <span class="st">':'</span>,</span>
-<span id="cb15-66"><a href="#cb15-66" aria-hidden="true" tabindex="-1"></a>                     subset_param,</span>
-<span id="cb15-67"><a href="#cb15-67" aria-hidden="true" tabindex="-1"></a>                     <span class="at">sep =</span> <span class="st">''</span>,</span>
-<span id="cb15-68"><a href="#cb15-68" aria-hidden="true" tabindex="-1"></a>                     <span class="at">collapse =</span> <span class="st">''</span>)</span>
+<span id="cb15-52"><a href="#cb15-52" aria-hidden="true" tabindex="-1"></a>  <span class="co">#base URL for example: api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR&amp;SCHL=24&amp;key=YOUR_KEY</span></span>
+<span id="cb15-53"><a href="#cb15-53" aria-hidden="true" tabindex="-1"></a>  <span class="co">#build and call API</span></span>
+<span id="cb15-54"><a href="#cb15-54" aria-hidden="true" tabindex="-1"></a>  base_URL1 <span class="ot">&lt;-</span> <span class="st">"https://api.census.gov/data/"</span></span>
+<span id="cb15-55"><a href="#cb15-55" aria-hidden="true" tabindex="-1"></a>  base_URL2 <span class="ot">&lt;-</span> <span class="st">"/acs/acs1/pums?"</span></span>
+<span id="cb15-56"><a href="#cb15-56" aria-hidden="true" tabindex="-1"></a>  query_URL <span class="ot">&lt;-</span> <span class="fu">paste</span>(base_URL1,</span>
+<span id="cb15-57"><a href="#cb15-57" aria-hidden="true" tabindex="-1"></a>                     yr,</span>
+<span id="cb15-58"><a href="#cb15-58" aria-hidden="true" tabindex="-1"></a>                     base_URL2,</span>
+<span id="cb15-59"><a href="#cb15-59" aria-hidden="true" tabindex="-1"></a>                     <span class="st">'get='</span>,</span>
+<span id="cb15-60"><a href="#cb15-60" aria-hidden="true" tabindex="-1"></a>                     get_param,</span>
+<span id="cb15-61"><a href="#cb15-61" aria-hidden="true" tabindex="-1"></a>                     <span class="st">'&amp;for='</span>,</span>
+<span id="cb15-62"><a href="#cb15-62" aria-hidden="true" tabindex="-1"></a>                     geoLevelCode,</span>
+<span id="cb15-63"><a href="#cb15-63" aria-hidden="true" tabindex="-1"></a>                     <span class="st">':'</span>,</span>
+<span id="cb15-64"><a href="#cb15-64" aria-hidden="true" tabindex="-1"></a>                     subset_param,</span>
+<span id="cb15-65"><a href="#cb15-65" aria-hidden="true" tabindex="-1"></a>                     <span class="at">sep =</span> <span class="st">''</span>,</span>
+<span id="cb15-66"><a href="#cb15-66" aria-hidden="true" tabindex="-1"></a>                     <span class="at">collapse =</span> <span class="st">''</span>)</span>
+<span id="cb15-67"><a href="#cb15-67" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb15-68"><a href="#cb15-68" aria-hidden="true" tabindex="-1"></a>  <span class="co">#print(query_URL)</span></span>
 <span id="cb15-69"><a href="#cb15-69" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb15-70"><a href="#cb15-70" aria-hidden="true" tabindex="-1"></a>  <span class="co">#print(query_URL)</span></span>
-<span id="cb15-71"><a href="#cb15-71" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb15-72"><a href="#cb15-72" aria-hidden="true" tabindex="-1"></a>  query_results <span class="ot">&lt;-</span> <span class="fu">GET</span>(query_URL)</span>
-<span id="cb15-73"><a href="#cb15-73" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(query_results)</span>
-<span id="cb15-74"><a href="#cb15-74" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb15-70"><a href="#cb15-70" aria-hidden="true" tabindex="-1"></a>  query_results <span class="ot">&lt;-</span> <span class="fu">GET</span>(query_URL)</span>
+<span id="cb15-71"><a href="#cb15-71" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(query_results)</span>
+<span id="cb15-72"><a href="#cb15-72" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
+</section>
+<section id="field-vectorization-function" class="level3">
+<h3 class="anchored" data-anchor-id="field-vectorization-function">Field vectorization function</h3>
+<p>Here, we need to adjust times and categories into ideal display values in our tibble. For instance, ‘HISPEED’ has three values 0,1,2 which correspond to N/A, Yes, No.&nbsp;We need to transform columns like this, accordingly.</p>
+<section id="section" class="level16">
+<p class="heading"></p>
+<p>DO MORE STUFF HERE ################</p>
+</section>
+</section>
+</section>
+<section id="validating-query-function-single-year" class="level2">
+<h2 class="anchored" data-anchor-id="validating-query-function-single-year">Validating query function (single year)</h2>
+<p>Now, let’s run some sample calls.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>test_results <span class="ot">&lt;-</span> <span class="fu">getToTibble</span>(</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">queryCensus</span>(<span class="at">yr=</span><span class="dv">2022</span>,<span class="at">catVars=</span><span class="fu">c</span>(<span class="st">'SEX'</span>,<span class="st">'HISPEED'</span>),<span class="at">geoLevel=</span><span class="st">'Division'</span>,<span class="at">geoSubset =</span> <span class="dv">2</span>,<span class="at">numVars=</span><span class="fu">c</span>(<span class="st">'AGEP'</span>,<span class="st">'PWGTP'</span>,<span class="st">'GASP'</span>))</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>test_results</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 429,663 × 6
+   V1    V2    V3    V4    V5      V6      
+   &lt;chr&gt; &lt;chr&gt; &lt;chr&gt; &lt;chr&gt; &lt;chr&gt;   &lt;chr&gt;   
+ 1 AGEP  PWGTP GASP  SEX   HISPEED division
+ 2 19    31    3     2     0       2       
+ 3 20    24    3     1     0       2       
+ 4 56    21    3     1     0       2       
+ 5 75    72    3     1     0       2       
+ 6 21    30    3     1     0       2       
+ 7 42    7     3     2     0       2       
+ 8 20    53    3     2     0       2       
+ 9 31    47    3     1     0       2       
+10 21    11    3     2     0       2       
+# ℹ 429,653 more rows</code></pre>
+</div>
+</div>
+<p>Success!</p>
+<p><em>Note that if syntax changes or limitations exist for other years of data (for instance, say ‘HISPEED’ was not available in year X), requests may fail.</em></p>
 <ol start="4" type="1">
 <li><p>Write a function to allow user to specify multiple years of survey data <strong>and</strong> all other options above.</p>
 <ul>
@@ -642,7 +677,6 @@ Attaching package: 'dplyr'</code></pre>
 </ul></li>
 </ul></li>
 </ol>
-</section>
 </section>
 </section>
 <section id="person-level-records" class="level1">
