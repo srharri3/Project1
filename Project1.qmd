@@ -10,41 +10,102 @@ editor: visual
 
 # Introduction
 
-This project demonstrates use of R for manipulating and processing census datasets via API. Generic functions will auto-summarize and auto-plot returned data. The document will describe how these function and provide examples.
+This project demonstrates the use of R for collecting, processing, and studying US Census data via its API. The data processing functions will allow a variety of fields to be pulled or subset, via their arguments. Data summary functions will auto-summarize and auto-plot the returned data. Lastly, we add commentary and analysis of some points of interest.
 
 # Data Source
 
-We will query the *Public Use Microdata Sample (PUMS) Census API*. The API offers *pseudo person-level* data. To demonstrate our functions while avoiding memory errors, we will default to a subset of state 14 data. Users may adjust this within our function calls.
+We will query the *Public Use Microdata Sample (PUMS) Census API*. The API offers *pseudo person-level* data. To demonstrate our functions while avoiding memory errors, we will default to a subset of data from state 17 Illinois. Users may adjust this subset and fields pulled via function arguments.
 
-## Resources
+## API Resources
 
 -   [Information about the PUMS API](https://www.census.gov/data/developers/data-sets/census-microdata-api.html)
 -   [Variable list (2022)](https://api.census.gov/data/2022/acs/acs1/pums/variables.html)
 -   [API call examples](https://api.census.gov/data/2022/acs/acs1/pums/examples.html)
 -   [Menu-based API call explorer](https://data.census.gov/mdat/#/)
--   Sample: `api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR&SCHL=24&key=YOUR_KEY`
+-   Sample API call: `api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR&SCHL=24&key=YOUR_KEY`
 
-## User Choices
+## API Fields
 
-User may choose particular variables or conditions (subsets) to be returned.
+Per the syllabus, our functions will accommodate retrieval of the following fields.
+
+1.  Year of survey
+    -   Default:
+        -   2022
+    -   Valid:
+        -   Integer in \[2010,2022\]
+    -   Conditions:
+        -   In query function, only one year is accessed per query. Multiple years will be looped with multiple calls.
+2.  Numeric var(s)
+    -   Default:
+        -   AGEP
+        -   PWGTP (always)
+    -   Valid:
+        -   AGEP
+        -   GASP
+        -   GRPIP
+        -   JWAP (time)
+        -   JWDP (time)
+        -   JWMNP
+    -   Conditions:
+        -   Translate variables to numeric or time (middle of period) as applicable.
+        -   PWGTP and at least one additional numeric var must be returned.
+        -   Ensure valid user entries.
+3.  Categorical var(s)
+    -   Default:
+        -   SEX
+    -   Valid:
+        -   FER
+        -   HHL
+        -   HISPEED
+        -   JWTRNS
+        -   SCH
+        -   SCHL
+        -   SEX
+    -   Conditions:
+        -   Translate variables into factors with appropriate levels as applicable.
+        -   At least one categorical variable must be returned.
+        -   Ensure valid user entries.
+4.  Geography level
+    -   Default:
+        -   All
+    -   Valid:
+        -   All
+        -   Region
+        -   Division
+        -   State
+    -   Conditions:
+        -   One selection only.
+        -   Ensure valid user entries.
+5.  Geography subsets
+    -   Default:
+        -   17
+    -   Valid:
+        -   N/A (no error checking provided)
+    -   Conditions:
+        -   User can specify specific Regions, Divisions, or States.
+        -   Only specific levels selected will be returned.
 
 # Data Processing
 
-We will follow these steps for data processing:
+## Plan
 
-1.  Achieve a basic call to a sample API endpoint, returning a tibble.
+We will follow these steps to develop our data processing functions.
 
-2.  Write a *helper* function to take the return from `GET()` and modify it into a `tibble`.
+1.  Begin by testing a sample API call.
 
-3.  Write a function to query API, with editable parameters.
+2.  Develop a helper function to process results from `GET()` into a useful `tibble`.
 
-4.  Write a function to allow user to specify multiple years of survey data **and** all other options above.
+3.  Develop a function to build and query the API according to user parameters, for one year.
 
-More details including valid arguments, etc. will be listed below, as we address each step.
+4.  Develop a function to process the API results into proper variable types and factors.
+
+5.  Develop a function to allow for multi-year query handling, processing the result into a single `tibble`.
+
+*Note that if syntax changes or limitations exist for certain years of data (for instance, say 'HISPEED' was not available in year X), requests may fail. All functions are tested and validated for the 2022 API endpoint, at a minimum.*
 
 ## Libraries
 
-Ensuring we have the appropriate libraries for the project and task.
+Loading necessary libraries for API processing and tidyverse functions.
 
 ```{r}
 #to help with parsing contents of API calls
@@ -60,209 +121,156 @@ library(tidyr)
 library(RSQLite)
 ```
 
-## Test call to the Census API
+## Sample API Test
 
-Before we build functions, let's just make a simple call without any API key, to ensure it works as expected.
+Before we build functions, let's just make a simple call to ensure we understand how to build the query and process its results. 
+
+We will call this sample URL:
+`https://api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR,ST&SCHL=24`
 
 ```{r}
-#base URL for example: api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR&SCHL=24&key=YOUR_KEY
+
+#build URL
 test_URL <- "https://api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR,ST&SCHL=24"
+
+#get url
 test_results <- GET(test_URL)
-test_parsed_content = fromJSON(rawToChar(test_results$content))
-test_tibble = as_tibble(test_parsed_content)
+
+#pull content JSON branch and convert to char
+test_parsed_content <- fromJSON(rawToChar(test_results$content))
+
+#convert to tibble
+test_tibble <- as_tibble(test_parsed_content)
+
+#display test
 test_tibble
+
 ```
 
 Success!
 
-## Function from GET to tibble
 
-Now, let's write the helper function that takes a GET result and produces a nice tibble.
+## Helper Functions
+
+### Fcn: Get Lookup [Table]
+
+In order to process API results into proper variable types and factors, we use this helper function to pull the lookup table for a provided variable.
 
 ```{r}
-# function getToTibble
-# purpose: Take results from a Census GET call, which come back with raw JSON, and transform them into a usable tibble that shows only the retrieved content in a friendly format.
-# arguments: get_results (the result of a prior call to GET() on the Census API)
-# returns: tibble corresponding to the parsed, json, raw to char 'content' element of the original GET result
-# error handling: none; only call this function when a valid argument is ready
-getToTibble <- function(get_results) {
-  parsed_results = fromJSON(rawToChar(get_results$content))
-  tibble_results = as_tibble(parsed_results)
-  return(tibble_results)
+# function:
+#   getLookup(varName,year=2022)
 
-}
+# purpose:
+#   Format and call API to get variable lookup data. Returns a 2-column tibble of keys and labels.
+#   Sample data dictionary call: https://api.census.gov/data/YEAR/acs/acs1/pums/variables/VARNAME.json
 
-#check for same end result as original test
-getToTibble(test_results)
-```
+# arguments: 
+#   varName - the variable we want to pull
+#   year - the year of the data dictionary to pull (default 2022)
 
-Success!
+# returns: 
+#   2-column tibble of keys and labels.
 
-## Function to get lookup tables for variable replacements
-We need to replace encoded values with labels from the variable lookups. This requires additional GET calls to a JSON definition URL, parsing, and returning the lookup table with clean row indices and column results.
-```{r}
-# function getLookup
-# purpose: Format and call API to get variable lookup data. Return the list of key and values.
-# arguments: varName - the variable we want to pull
-#            year - the year of the data dictionary to pull
-# returns: list of key and lookup values
-# error handling: none; only call this function with valid variable name and year
-# https://api.census.gov/data/YEAR/acs/acs1/pums/variables/VARNAME.json
+# error handling: 
+#   none!!
+
 getLookup <- function(varName, year=2022) {
   
-  #prepare url
+  #prepare API dictionary call
   lookup_URL_base1 <- 'https://api.census.gov/data/'
   lookup_URL_base2 <- '/acs/acs1/pums/variables/'
   lookup_URL_suffix <- '.json'
   lookup_URL <- paste(lookup_URL_base1,
-                     year,
-                     lookup_URL_base2,
-                     varName,
-                     lookup_URL_suffix,
-                     sep = '',
-                     collapse = '')
+                      year,
+                      lookup_URL_base2,
+                      varName,
+                      lookup_URL_suffix,
+                      sep = '',
+                      collapse = '')
   
   #pull result and get tibble, keep only the values/items
   lookup_URL_result <- GET(lookup_URL) |> getToTibble()
   
-  #keep only the needed parts
+  #keep only the needed parts in values:item, order by keys
   lookup_valuesItem <- lookup_URL_result$values$item
   lookup_list <- lookup_valuesItem[sort(names(lookup_valuesItem))]
   
   #format as a long tibble
   lookup_tibble <- lookup_list |> as_tibble() |> pivot_longer(cols=everything())
   
+  #return long, 2-column tibble
   return(lookup_tibble)
+  
 }
 ```
 
+### Fcn: Check Year
 
+This function takes an argument of *year* and returns `TRUE` if it is valid for our project.
 
-## Function to customize API call per user input
-
-This introduces a fair bit of complexity. We want to enable the user to query the API flexibly, as described below. In this function, we will ensure valid selections and query results for a specific year.
-
-To make this manageable, we will use helper functions for tasks like validating arguments.
-
-*Note also that we will include and limit by default to a single ST (state) category, as mentioned in headers. Because `14` is not a valid state in the dataset, we will use the 14th available label, corresponding to ST=17 Illinois/IL. See [ST list](https://api.census.gov/data/2022/acs/acs1/pums/variables/ST.json).*
-
-1.  Year of survey
-    -   Default:
-        -   2022
-    -   Valid:
-        -   Integer in \[2010,2022\]
-    -   Function: checkYear()
-2.  Numeric var(s) to return
-    -   Default:
-        -   AGEP
-        -   PWGTP (req)
-    -   Valid:
-        -   AGEP
-        -   GASP
-        -   GRPIP
-        -   JWAP (time)
-        -   JWDP (time)
-        -   JWMNP
-    -   Conditions:
-        -   Translate variables to numeric or time (middle of period) as applicable.
-        -   At least one numeric var other than PWGTP must be returned.
-        -   Ensure valid user entries.
-    -   Function: checkNumVars()
-3.  Categorical var(s) to return
-    -   Default:
-        -   SEX
-    -   Valid:
-        -   FER
-        -   HHL
-        -   HISPEED
-        -   JWTRNS
-        -   SCH
-        -   SCHL
-        -   SEX
-    -   Conditions:
-        -   Translate variables into factors with appropriate levels as applicable.
-        -   At least one categorical variable must be returned.
-        -   Ensure valid user entries.
-    -   Function: checkCatVars()
-4.  Geography level
-    -   Default:
-        -   All
-    -   Valid:
-        -   All
-        -   Region
-        -   Division
-        -   State
-    -   Conditions:
-        -   Ensure valid user entries.
-    -   Function: checkGeo()
-5.  Subset geo argument (to adjust API call made)
-    -   Conditions:
-        -   User can specify specific Regions, Divisions, or States.
-        -   Only specific levels selected will be returned.
-        -   Ensure valid user entries.
-
-### Check year
-- Default: 
-    - 2022 
-- Valid: 
-    - Integer in \[2010,2022\] 
-- Function: checkYear()
+Valid arguments: A single year in the range [2010,2022]
 
 ```{r}
-# function checkYear()
-# purpose: Confirm that passed integer value is within [2010,2022].
-# arguments: yr (integer)
-# returns: TRUE for a successful value, FALSE else (including error)
-# error handling: FALSE for non-int
-checkYear <- function(yr) {
+# function:
+#   checkYear(year)
 
-  #set FALSE if non-int or out of bounds
-  pass <- case_when(
-    yr%%1 != 0 ~ FALSE,
-    yr < 2010 ~ FALSE,
-    yr > 2022 ~ FALSE,
-    TRUE ~ TRUE
+# purpose:
+#   Confirm that passed integer value is within [2010,2022].
+
+# arguments: 
+#   year - the year to check
+
+# returns: 
+#   TRUE for successful validation, FALSE else (including error)
+
+# error handling: 
+#   FALSE for non-integer
+
+checkYear <- function(year) {
+
+  validation <- case_when(
+    year%%1 != 0 ~ FALSE, #non-int = FALSE
+    year < 2010 ~ FALSE,  #below 2010 = FALSE
+    year > 2022 ~ FALSE,  #over 2022 = FALSE
+    TRUE ~ TRUE           #else = TRUE
   )
   
-  #TRUE if valid
-  return(pass)
+  return(validation)
+  
 }
 ```
 
-### Numeric vars
+### Fcn: Check Num[eric] Vars
 
--   Default:
-    -   AGEP
-    -   PWGTP (req)
--   Valid:
-    -   AGEP
-    -   GASP
-    -   GRPIP
-    -   JWAP (time)
-    -   JWDP (time)
-    -   JWMNP
-    -   PWGTP
--   Conditions:
-    -   Translate variables to numeric or time (middle of period) as applicable.
-    -   At least one numeric var other than PWGTP must be returned.
-    -   Ensure valid user entries.
--   Function: checkNumVars()
+This function takes an argument of a vector of characters representing the set of numeric variables being requested. It validates them and returns `TRUE` if the entire set is valid.
+
+Valid arguments: 1+ strings only from the set [AGEP,GASP,GRPIP,JWAP,JWDP,JWMNP,PWGTP]
 
 ```{r}
-# function checkNumVars()
-# purpose: Confirm that numeric variable names passed are within the legitimate set.
-# arguments: vars (vector of chars)
-# returns: TRUE for all successful values, FALSE else
-# error handling: none; assumes a vector of characters for expected behavior
+# function:
+#   checkNumVars(vars)
+
+# purpose:
+#   Confirm that numeric variable names passed are within the legitimate set.
+
+# arguments: 
+#   vars - vector of chars
+
+# returns: 
+#   TRUE if all elements pass validation, FALSE else
+
+# error handling: 
+#   none!!
+
 checkNumVars <- function(vars) {
-  
-  #init pass. If it remains TRUE, return will be TRUE (passes check)
-  pass = TRUE
+
+  #init validation. If it remains TRUE, validation successful.
+  validation <- TRUE
   
   #cycle through all values in the vector
   for (var_i in vars) {
     
-    #if value of element not in list, toggle pass to FALSE
+    #if value of element not in list, toggle validation to FALSE
     if (!(var_i %in% c('AGEP',
                        'GASP',
                        'GRPIP',
@@ -270,46 +278,44 @@ checkNumVars <- function(vars) {
                        'JWDP',
                        'JWMNP',
                        'PWGTP')))
-      pass = FALSE
+      validation <- FALSE
   }
   
-  return(pass)
+  return(validation)
 }
 ```
 
-### Categorical vars
+### Fcn: Check Cat[egorical] Vars
 
--   Default:
-    -   SEX
--   Valid:
-    -   FER
-    -   HHL
-    -   HISPEED
-    -   JWTRNS
-    -   SCH
-    -   SCHL
-    -   SEX
--   Conditions:
-    -   Translate variables into factors with appropriate levels as applicable.
-    -   At least one categorical variable must be returned.
-    -   Ensure valid user entries.
--   Function: checkCatVars()
+This function takes an argument of a vector of characters representing the set of categorical variables being requested. It validates them and returns `TRUE` if the entire set is valid.
+
+Valid arguments: 1+ strings only from the set [SEX,FER,HHL,HISPEED,JWTRNS,SCH,SCHL]
 
 ```{r}
-# function checkCatVars()
-# purpose: Confirm that categorical variable names passed are within the legitimate set.
-# arguments: vars (vector of chars)
-# returns: TRUE for all successful values, FALSE else
-# error handling: none; assumes a vector of characters for expected behavior
+# function:
+#   checkCatVars(vars)
+
+# purpose:
+#   Confirm that categorical variable names passed are within the legitimate set.
+
+# arguments: 
+#   vars - vector of chars
+
+# returns: 
+#   TRUE if all elements pass validation, FALSE else
+
+# error handling: 
+#   none!!
+
 checkCatVars <- function(vars) {
-  
-  #init pass. If it remains TRUE, return will be TRUE (passes check)
-  pass = TRUE
+
+  #init validation. If it remains TRUE, validation successful.
+  validation <- TRUE
   
   #cycle through all values in the vector
   for (var_i in vars) {
     
-    #if value of element not in list, toggle pass to FALSE
+    #if value of element not in list, toggle validation to FALSE
     if (!(var_i %in% c('SEX',
                        'FER',
                        'HHL',
@@ -317,78 +323,147 @@ checkCatVars <- function(vars) {
                        'JWTRNS',
                        'SCH',
                        'SCHL')))
-      pass = FALSE
+      validation <- FALSE
   }
   
-  return(pass)
+  return(validation)
 }
 ```
 
-### Geography level
+### Fcn: Check Geo[graphy Level]
 
--   Default:
-    -   All
--   Valid:
-    -   All
-    -   Region
-    -   Division
-    -   State
--   Conditions:
-    -   Ensure valid user entries.
--   Function: checkGeo()
+This function takes an argument of a character string representing the geography level for subsetting. It validates the requested type is within the accepted list, returning `TRUE` if so.
+
+Valid arguments: A string from the set [All,Region,Division,State]
 
 ```{r}
-# function checkGeo()
-# purpose: Confirm that geo selections passed are within the legitimate set.
-# arguments: geo (char string)
-# returns: TRUE for all successful values, FALSE else (includes error)
-# error handling: none; geo must be length 1
-checkGeo <- function(geo) {
+# function:
+#   checkGeo(geoLevel)
+
+# purpose:
+#   Confirm that geography level is a single string within legitimate set.
+
+# arguments: 
+#   geoLevel - string
+
+# returns: 
+#   TRUE if element passes validation, FALSE else
+
+# error handling: 
+#   FALSE if vector length is beyond 1 string
+
+checkGeo <- function(geoLevel) {
   
   #set FALSE if longer than 1 or out of bounds
-  if (length(geo) != 1) pass = FALSE
-  else if (geo %in% c('All',
-                      'Region',
-                      'Division',
-                      'State'))
-    pass = TRUE
+  if (length(geoLevel) != 1) 
+    
+    validation = FALSE
+  
+  else if (geoLevel %in% c('All',
+                           'Region',
+                           'Division',
+                           'State'))
+    
+    validation = TRUE
+  
   else
-    pass = FALSE
+    
+    validation = FALSE
   
   #TRUE if valid
-  return(pass)
-
+  return(validation)
 }
 ```
 
-### Query Function
 
-This function will build and get the URL with the appropriate elements built into the query string. It will ensure valid arguments first, then build the call, then send it and return the result of the GET command.
+
+
+
+## Main Functions
+
+### Fcn: [From] GET to Tibble
+
+Now, let's develop the helper function to process results from `GET()` into a useful `tibble`.
+
 ```{r}
-# function queryCensus()
-# purpose: Build and call census API.
-# arguments:
-#     yr: year to query
-#     numVars: vector of chars, 1 or more
-#     catVars: vector of chars, 1 or more
-#     geoLevel: one string matching permitted values
-#     geoSubset: vector of chars, 1 or more, for subset by geoLevel (no restrictions)
-# returns: either NA (if invalid) or result of the GET call
-# error handling: error if any parameters are invalid
-queryCensus <- function(yr = 2022,
+# function:
+#   getToTibble(get_results)
+
+# purpose:
+#   Take results from a Census GET call, which come back with raw JSON, and transform them into a usable tibble that shows only the retrieved content in a friendly format.
+
+# arguments: 
+#   get_results - the result of a prior call to GET() on the Census API
+
+# returns: 
+#   tibble corresponding to the parsed, json, raw to char 'content' element of the original GET result
+
+# error handling: 
+#   none!!
+
+getToTibble <- function(get_results) {
+  
+  #pull content JSON branch and convert to char
+  parsed_results <- fromJSON(rawToChar(get_results$content))
+  
+  #convert to tibble
+  tibble_results = as_tibble(parsed_results)  
+
+  #return tibble
+  return(tibble_results)
+}
+```
+
+Let's confirm that our function produces the same result as our earlier manual API call.
+```{r}
+getToTibble(test_results)
+```
+
+Success!
+
+
+### Fcn: Query [the] Census [API]
+
+Developing a function to build and query the API according to user parameters is complex. 
+
+It requires a good deal of error checking to ensure valid field names. Helper functions will be used for validating parameters. Defaults will exist for parameters, including a default to subset by *State = 17 Illinois/IL* to keep data sizes manageable (unless otherwise specified in the function call).
+
+For a reminder of valid fields, consult the previous section on *API Fields*.
+
+```{r}
+# function:
+#   queryCensus(year=2022,numVars=c('AGEP','PWGTP'),catVars='SEX',geoLevel='All',geoSubset=17)
+
+# purpose:
+#   Build and call the Census API, returning NA if invalid or the result of the correct GET call.
+
+# arguments: 
+#   year - year to query
+#   numVars - vector of chars, 1 or more
+#   catVars - vector of chars, 1 or more
+#   geoLevel - one string matching permitted values
+#   geoSubset - vector of chars, 1 or more, for subset by geoLevel (no restrictions)
+
+# returns: 
+#   NA if even one parameter is invalid, else the result of the GET call
+
+# error handling: 
+#   NA if any parameter is invalid
+
+queryCensus <- function(year = 2022,
                         numVars = c('AGEP','PWGTP'),
                         catVars = 'SEX',
                         geoLevel = 'All',
                         geoSubset = 17 ) { 
 
   #validate arguments
-  status <- checkYear(yr) &
+  status <- checkYear(year) &
             checkNumVars(numVars) &
             checkCatVars(catVars) &
             checkGeo(geoLevel)
-  #if any of these failed, status is now FALSE
-  #if so, exit with NA
-  if (!status) return(NA)
+  #if any of these failed, status is now FALSE and exit returning NA
+  if (!status) 
+    return(NA)
   
   #otherwise, proceed and combine strings appropriately for query parameters
 
@@ -421,7 +496,7 @@ queryCensus <- function(yr = 2022,
   base_URL1 <- "https://api.census.gov/data/"
   base_URL2 <- "/acs/acs1/pums?"
   query_URL <- paste(base_URL1,
-                     yr,
+                     year,
                      base_URL2,
                      'get=',
                      get_param,
@@ -432,28 +507,54 @@ queryCensus <- function(yr = 2022,
                      sep = '',
                      collapse = '')
   
-  #print(query_URL)
+  #display the final URL for helpful reference
+  print(query_URL)
   
+  #run query and return GET results
   query_results <- GET(query_URL)
+  
   return(query_results)
 }
 ```
 
-### Field formatting function
-Here, we need to adjust numeric fields from char to num/time, and replace enumerated categorical field values with representative labels in our tibble. For instance, 'HISPEED' has three values 0,1,2 which correspond to N/A, Yes, No. We need to transform columns like this, accordingly.
+### Fcn: Format [API] Results
+
+We need to adjust numeric fields from char to num/time and replace enumerated categorical field values with representative labels in our tibble. For instance, 'HISPEED' has three values 0,1,2 which correspond to N/A, Yes, No. 
+
+We need to transform each column according to its type and lookup values. Also, we take the header names from row 1 into the column labels, removing row 1.
 
 ```{r}
-# function formatResults()
-# purpose: Mutate columns of our tibble to appropriate type and adjust the column names and cut the header row.
-# arguments: tibble of Census results, desired year for data dictionary formatting (2022 default)
-# returns: adjusted tibble
-# error handling: none, only call when appropraite
+# function:
+#   formatResults(results,year=2022)
+
+# purpose:
+#   Replace columns of the tibble with appropriate type and values. Also fix column labels/header.
+
+# arguments: 
+#   results - tibble of Census results
+#   year - year to query
+
+# returns: 
+#   Adjusted, formatted tibble
+
+# error handling: 
+#   none!!
+
 formatResults <- function(results,year=2022) {
   
-  #update the column names
+  #if year is a field, get ready to swap it back
+  if ('Year' %in% names(results))
+    year_on <- TRUE
+  else
+    year_on <- FALSE
+  
+  #update the column names from row1
   names(results) <- results[1,]
   
-  #remove first row
+  #fix year if needed
+  if (year_on) attributes(results)$names[length(results)] <- 'Year'
+  
+  #remove row1
   results <- results[-1,]
   
   #vector of all possible GET variables that may require revision
@@ -471,11 +572,11 @@ formatResults <- function(results,year=2022) {
                     'JWTRNS',
                     'SCH',
                     'SCHL',
-                    'REGION',
-                    'DIVISION',
-                    'STATE')
+                    'Region',
+                    'Division',
+                    'State')
   
-  #vector of all possible variables by types
+  #vectors of all possible variables by types
   numeric_variables = c('AGEP',
                         'PWGTP',
                         'GASP',
@@ -490,12 +591,12 @@ formatResults <- function(results,year=2022) {
                     'JWTRNS',
                     'SCH',
                     'SCHL',
-                    'REGION',
-                    'DIVISION',
-                    'STATE')
+                    'Region',
+                    'Division',
+                    'State')
   
   #loop through all possible vars requiring update
-  #if it exists in our tibble as a column, mutate the column type appropriately
+  #if it exists in our tibble as a column, revise the column type appropriately
   for (varName in all_variables) {
   
     #loop through all columns in tibble
@@ -519,8 +620,14 @@ formatResults <- function(results,year=2022) {
         #for a categ type, swap its contents from index to label 
         if (varName %in% cat_variables) {
 
+          #pull lookup table for cat var
+          #special handling if 'State' because that has to lookup using "ST"
+          if(varName=='State')
+            lookup <- getLookup('ST',year)
+          else
+            lookup <- getLookup(varName,year)
+          
           #make a temp join but only keep the replaced char labels in the result column
-          lookup <- getLookup(varName,year)
           temp <- results[varName]
           names(temp)='name'
           temp_join <- left_join(temp,lookup,by=join_by(name == name))
@@ -529,19 +636,13 @@ formatResults <- function(results,year=2022) {
           results[varName] <- temp_join$value
         }
                                       
-                              
-                              
       }
       
-      
-      #will need to consider NUMERIC, CATEGORICAL, and GEO
     }
     
   }
   
   #special handling for geo lookup, because in function call previously it doesn't like it 
-
-  #make a temp join but only keep the replaced char labels in the result column
   if("region" %in% names(results)) {
     geoLevel <- "region"
     geoLevel_query <- "REGION"
@@ -554,587 +655,99 @@ formatResults <- function(results,year=2022) {
     geoLevel <- "state"
     geoLevel_query <- "ST"
   }
-
+  
+  #pull lookup table for geo field
   lookup <- getLookup(geoLevel_query,year)
-  temp <- results[geoLevel]
-  names(temp)='name'
-  temp_join <- left_join(temp,lookup,by=join_by(name == name))
+  
+  #make a temp join but only keep the replaced char labels in the result column
+  temp2 <- results[geoLevel]
+  names(temp2)='name'
+  temp2_join <- left_join(temp2,lookup,by=join_by(name == name))
   
   #revise values 
-  results[geoLevel] <- temp_join$value
+  results[geoLevel] <- temp2_join$value
   
-  
+  #return revised tibble
   return(results)
 }
-
-
 ```
 
-################ 
-DO MORE STUFF HERE
-################
-agep - Age
-      "00": "Under 1 year"
-    },
-    "range": [
-      {
-        "min": "1",
-        "max": "99",
-        "description": "1 to 99 years (Top-coded***)"
-pwgtp - PUMS person weight
-        "min": "1",
-        "max": "9999",
-        "description": "Continuous values of PWGTP"
-gasp - Gas cost (monthly cost, use ADJHSG to adjust GASP to constant dollars)
-      "3": "N/A (GQ/vacant/included in rent or in condo fee/included in electricity payment/no charge or gas not used)"
-    },
-    "range": [
-      {
-        "min": "4",
-        "max": "9999",
-        "description": "$4 to $9999 (Rounded and top-coded)"
-grpip - Gross rent as a percentage of household income past 12 months
-      "0": "N/A (GQ/vacant/owned or being bought/occupied without rent payment/no household income)",
-      "101": "101 percent or more"
-    },
-    "range": [
-      {
-        "min": "1",
-        "max": "100",
-        "description": "1 percent to 100 percent"
-jwap - Time of arrival at work - hour and minute
-      "258": "9:40 p.m. to 9:44 p.m.",
-      "260": "9:50 p.m. to 9:54 p.m.",
-      "261": "9:55 p.m. to 9:59 p.m.",
-      "274": "11:00 p.m. to 11:04 p.m.",
-      "048": "4:10 a.m. to 4:14 a.m.",
-      "058": "5:00 a.m. to 5:04 a.m.",
-      "076": "6:30 a.m. to 6:34 a.m.",
-      "091": "7:45 a.m. to 7:49 a.m.",
-      "094": "8:00 a.m. to 8:04 a.m.",
-      "122": "10:20 a.m. to 10:24 a.m.",
-      "142": "12:00 p.m. to 12:04 p.m.",
-      "146": "12:20 p.m. to 12:24 p.m.",
-      "163": "1:45 p.m. to 1:49 p.m.",
-      "165": "1:55 p.m. to 1:59 p.m.",
-      "171": "2:25 p.m. to 2:29 p.m.",
-      "184": "3:30 p.m. to 3:34 p.m.",
-      "189": "3:55 p.m. to 3:59 p.m.",
-      "192": "4:10 p.m. to 4:14 p.m.",
-      "198": "4:40 p.m. to 4:44 p.m.",
-      "210": "5:40 p.m. to 5:44 p.m.",
-      "218": "6:20 p.m. to 6:24 p.m.",
-      "220": "6:30 p.m. to 6:34 p.m.",
-      "221": "6:35 p.m. to 6:39 p.m.",
-      "222": "6:40 p.m. to 6:44 p.m.",
-      "224": "6:50 p.m. to 6:54 p.m.",
-      "227": "7:05 p.m. to 7:09 p.m.",
-      "228": "7:10 p.m. to 7:14 p.m.",
-      "251": "9:05 p.m. to 9:09 p.m.",
-      "256": "9:30 p.m. to 9:34 p.m.",
-      "259": "9:45 p.m. to 9:49 p.m.",
-      "262": "10:00 p.m. to 10:04 p.m.",
-      "270": "10:40 p.m. to 10:44 p.m.",
-      "271": "10:45 p.m. to 10:49 p.m.",
-      "276": "11:10 p.m. to 11:14 p.m.",
-      "284": "11:50 p.m. to 11:54 p.m.",
-      "006": "12:25 a.m. to 12:29 a.m.",
-      "008": "12:40 a.m. to 12:44 a.m.",
-      "009": "12:45 a.m. to 12:49 a.m.",
-      "011": "1:00 a.m. to 1:04 a.m.",
-      "017": "1:30 a.m. to 1:34 a.m.",
-      "020": "1:45 a.m. to 1:49 a.m.",
-      "031": "2:45 a.m. to 2:49 a.m.",
-      "039": "3:25 a.m. to 3:29 a.m.",
-      "053": "4:35 a.m. to 4:39 a.m.",
-      "065": "5:35 a.m. to 5:39 a.m.",
-      "075": "6:25 a.m. to 6:29 a.m.",
-      "085": "7:15 a.m. to 7:19 a.m.",
-      "090": "7:40 a.m. to 7:44 a.m.",
-      "101": "8:35 a.m. to 8:39 a.m.",
-      "107": "9:05 a.m. to 9:09 a.m.",
-      "121": "10:15 a.m. to 10:19 a.m.",
-      "124": "10:30 a.m. to 10:34 a.m.",
-      "137": "11:35 a.m. to 11:39 a.m.",
-      "156": "1:10 p.m. to 1:14 p.m.",
-      "164": "1:50 p.m. to 1:54 p.m.",
-      "173": "2:35 p.m. to 2:39 p.m.",
-      "197": "4:35 p.m. to 4:39 p.m.",
-      "202": "5:00 p.m. to 5:04 p.m.",
-      "234": "7:40 p.m. to 7:44 p.m.",
-      "235": "7:45 p.m. to 7:49 p.m.",
-      "246": "8:40 p.m. to 8:44 p.m.",
-      "249": "8:55 p.m. to 8:59 p.m.",
-      "257": "9:35 p.m. to 9:39 p.m.",
-      "273": "10:55 p.m. to 10:59 p.m.",
-      "277": "11:15 p.m. to 11:19 p.m.",
-      "002": "12:05 a.m. to 12:09 a.m.",
-      "004": "12:15 a.m. to 12:19 a.m.",
-      "015": "1:20 a.m. to 1:24 a.m.",
-      "034": "3:00 a.m. to 3:04 a.m.",
-      "035": "3:05 a.m. to 3:09 a.m.",
-      "042": "3:40 a.m. to 3:44 a.m.",
-      "044": "3:50 a.m. to 3:54 a.m.",
-      "050": "4:20 a.m. to 4:24 a.m.",
-      "052": "4:30 a.m. to 4:34 a.m.",
-      "055": "4:45 a.m. to 4:49 a.m.",
-      "069": "5:55 a.m. to 5:59 a.m.",
-      "071": "6:05 a.m. to 6:09 a.m.",
-      "077": "6:35 a.m. to 6:39 a.m.",
-      "079": "6:45 a.m. to 6:49 a.m.",
-      "082": "7:00 a.m. to 7:04 a.m.",
-      "089": "7:35 a.m. to 7:39 a.m.",
-      "092": "7:50 a.m. to 7:54 a.m.",
-      "093": "7:55 a.m. to 7:59 a.m.",
-      "097": "8:15 a.m. to 8:19 a.m.",
-      "117": "9:55 a.m. to 9:59 a.m.",
-      "118": "10:00 a.m. to 10:04 a.m.",
-      "129": "10:55 a.m. to 10:59 a.m.",
-      "132": "11:10 a.m. to 11:14 a.m.",
-      "138": "11:40 a.m. to 11:44 a.m.",
-      "144": "12:10 p.m. to 12:14 p.m.",
-      "148": "12:30 p.m. to 12:34 p.m.",
-      "150": "12:40 p.m. to 12:44 p.m.",
-      "152": "12:50 p.m. to 12:54 p.m.",
-      "166": "2:00 p.m. to 2:04 p.m.",
-      "181": "3:15 p.m. to 3:19 p.m.",
-      "183": "3:25 p.m. to 3:29 p.m.",
-      "205": "5:15 p.m. to 5:19 p.m.",
-      "219": "6:25 p.m. to 6:29 p.m.",
-      "230": "7:20 p.m. to 7:24 p.m.",
-      "233": "7:35 p.m. to 7:39 p.m.",
-      "239": "8:05 p.m. to 8:09 p.m.",
-      "244": "8:30 p.m. to 8:34 p.m.",
-      "254": "9:20 p.m. to 9:24 p.m.",
-      "265": "10:15 p.m. to 10:19 p.m.",
-      "272": "10:50 p.m. to 10:54 p.m.",
-      "013": "1:10 a.m. to 1:14 a.m.",
-      "014": "1:15 a.m. to 1:19 a.m.",
-      "019": "1:40 a.m. to 1:44 a.m.",
-      "022": "2:00 a.m. to 2:04 a.m.",
-      "033": "2:55 a.m. to 2:59 a.m.",
-      "037": "3:15 a.m. to 3:19 a.m.",
-      "041": "3:35 a.m. to 3:39 a.m.",
-      "059": "5:05 a.m. to 5:09 a.m.",
-      "067": "5:45 a.m. to 5:49 a.m.",
-      "068": "5:50 a.m. to 5:54 a.m.",
-      "074": "6:20 a.m. to 6:24 a.m.",
-      "080": "6:50 a.m. to 6:54 a.m.",
-      "084": "7:10 a.m. to 7:14 a.m.",
-      "088": "7:30 a.m. to 7:34 a.m.",
-      "095": "8:05 a.m. to 8:09 a.m.",
-      "100": "8:30 a.m. to 8:34 a.m.",
-      "125": "10:35 a.m. to 10:39 a.m.",
-      "140": "11:50 a.m. to 11:54 a.m.",
-      "172": "2:30 p.m. to 2:34 p.m.",
-      "178": "3:00 p.m. to 3:04 p.m.",
-      "182": "3:20 p.m. to 3:24 p.m.",
-      "185": "3:35 p.m. to 3:39 p.m.",
-      "187": "3:45 p.m. to 3:49 p.m.",
-      "199": "4:45 p.m. to 4:49 p.m.",
-      "206": "5:20 p.m. to 5:24 p.m.",
-      "208": "5:30 p.m. to 5:34 p.m.",
-      "209": "5:35 p.m. to 5:39 p.m.",
-      "243": "8:25 p.m. to 8:29 p.m.",
-      "268": "10:30 p.m. to 10:34 p.m.",
-      "269": "10:35 p.m. to 10:39 p.m.",
-      "279": "11:25 p.m. to 11:29 p.m.",
-      "001": "12:00 a.m. to 12:04 a.m.",
-      "005": "12:20 a.m. to 12:24 a.m.",
-      "007": "12:30 a.m. to 12:39 a.m.",
-      "023": "2:05 a.m. to 2:09 a.m.",
-      "025": "2:15 a.m. to 2:19 a.m.",
-      "029": "2:35 a.m. to 2:39 a.m.",
-      "036": "3:10 a.m. to 3:14 a.m.",
-      "043": "3:45 a.m. to 3:49 a.m.",
-      "046": "4:00 a.m. to 4:04 a.m.",
-      "051": "4:25 a.m. to 4:29 a.m.",
-      "056": "4:50 a.m. to 4:54 a.m.",
-      "073": "6:15 a.m. to 6:19 a.m.",
-      "081": "6:55 a.m. to 6:59 a.m.",
-      "098": "8:20 a.m. to 8:24 a.m.",
-      "103": "8:45 a.m. to 8:49 a.m.",
-      "106": "9:00 a.m. to 9:04 a.m.",
-      "114": "9:40 a.m. to 9:44 a.m.",
-      "135": "11:25 a.m. to 11:29 a.m.",
-      "143": "12:05 p.m. to 12:09 p.m.",
-      "149": "12:35 p.m. to 12:39 p.m.",
-      "157": "1:15 p.m. to 1:19 p.m.",
-      "158": "1:20 p.m. to 1:24 p.m.",
-      "160": "1:30 p.m. to 1:34 p.m.",
-      "170": "2:20 p.m. to 2:24 p.m.",
-      "174": "2:40 p.m. to 2:44 p.m.",
-      "179": "3:05 p.m. to 3:09 p.m.",
-      "194": "4:20 p.m. to 4:24 p.m.",
-      "196": "4:30 p.m. to 4:34 p.m.",
-      "211": "5:45 p.m. to 5:49 p.m.",
-      "212": "5:50 p.m. to 5:54 p.m.",
-      "214": "6:00 p.m. to 6:04 p.m.",
-      "241": "8:15 p.m. to 8:19 p.m.",
-      "264": "10:10 p.m. to 10:14 p.m.",
-      "266": "10:20 p.m. to 10:24 p.m.",
-      "016": "1:25 a.m. to 1:29 a.m.",
-      "018": "1:35 a.m. to 1:39 a.m.",
-      "021": "1:50 a.m. to 1:59 a.m.",
-      "028": "2:30 a.m. to 2:34 a.m.",
-      "054": "4:40 a.m. to 4:44 a.m.",
-      "060": "5:10 a.m. to 5:14 a.m.",
-      "064": "5:30 a.m. to 5:34 a.m.",
-      "070": "6:00 a.m. to 6:04 a.m.",
-      "078": "6:40 a.m. to 6:44 a.m.",
-      "087": "7:25 a.m. to 7:29 a.m.",
-      "105": "8:55 a.m. to 8:59 a.m.",
-      "111": "9:25 a.m. to 9:29 a.m.",
-      "119": "10:05 a.m. to 10:09 a.m.",
-      "123": "10:25 a.m. to 10:29 a.m.",
-      "126": "10:40 a.m. to 10:44 a.m.",
-      "134": "11:20 a.m. to 11:24 a.m.",
-      "139": "11:45 a.m. to 11:49 a.m.",
-      "141": "11:55 a.m. to 11:59 a.m.",
-      "151": "12:45 p.m. to 12:49 p.m.",
-      "153": "12:55 p.m. to 12:59 p.m.",
-      "169": "2:15 p.m. to 2:19 p.m.",
-      "180": "3:10 p.m. to 3:14 p.m.",
-      "203": "5:05 p.m. to 5:09 p.m.",
-      "204": "5:10 p.m. to 5:14 p.m.",
-      "207": "5:25 p.m. to 5:29 p.m.",
-      "215": "6:05 p.m. to 6:09 p.m.",
-      "216": "6:10 p.m. to 6:14 p.m.",
-      "217": "6:15 p.m. to 6:19 p.m.",
-      "223": "6:45 p.m. to 6:49 p.m.",
-      "225": "6:55 p.m. to 6:59 p.m.",
-      "247": "8:45 p.m. to 8:49 p.m.",
-      "248": "8:50 p.m. to 8:54 p.m.",
-      "252": "9:10 p.m. to 9:14 p.m.",
-      "253": "9:15 p.m. to 9:19 p.m.",
-      "255": "9:25 p.m. to 9:29 p.m.",
-      "263": "10:05 p.m. to 10:09 p.m.",
-      "267": "10:25 p.m. to 10:29 p.m.",
-      "278": "11:20 p.m. to 11:24 p.m.",
-      "280": "11:30 p.m. to 11:34 p.m.",
-      "281": "11:35 p.m. to 11:39 p.m.",
-      "282": "11:40 p.m. to 11:44 p.m.",
-      "0": "N/A (not a worker; worker who worked from home)",
-      "003": "12:10 a.m. to 12:14 a.m.",
-      "010": "12:50 a.m. to 12:59 a.m.",
-      "038": "3:20 a.m. to 3:24 a.m.",
-      "049": "4:15 a.m. to 4:19 a.m.",
-      "057": "4:55 a.m. to 4:59 a.m.",
-      "061": "5:15 a.m. to 5:19 a.m.",
-      "062": "5:20 a.m. to 5:24 a.m.",
-      "072": "6:10 a.m. to 6:14 a.m.",
-      "083": "7:05 a.m. to 7:09 a.m.",
-      "104": "8:50 a.m. to 8:54 a.m.",
-      "108": "9:10 a.m. to 9:14 a.m.",
-      "116": "9:50 a.m. to 9:54 a.m.",
-      "128": "10:50 a.m. to 10:54 a.m.",
-      "133": "11:15 a.m. to 11:19 a.m.",
-      "136": "11:30 a.m. to 11:34 a.m.",
-      "147": "12:25 p.m. to 12:29 p.m.",
-      "154": "1:00 p.m. to 1:04 p.m.",
-      "155": "1:05 p.m. to 1:09 p.m.",
-      "161": "1:35 p.m. to 1:39 p.m.",
-      "162": "1:40 p.m. to 1:44 p.m.",
-      "167": "2:05 p.m. to 2:09 p.m.",
-      "175": "2:45 p.m. to 2:49 p.m.",
-      "177": "2:55 p.m. to 2:59 p.m.",
-      "186": "3:40 p.m. to 3:44 p.m.",
-      "190": "4:00 p.m. to 4:04 p.m.",
-      "191": "4:05 p.m. to 4:09 p.m.",
-      "193": "4:15 p.m. to 4:19 p.m.",
-      "200": "4:50 p.m. to 4:54 p.m.",
-      "201": "4:55 p.m. to 4:59 p.m.",
-      "226": "7:00 p.m. to 7:04 p.m.",
-      "232": "7:30 p.m. to 7:34 p.m.",
-      "236": "7:50 p.m. to 7:54 p.m.",
-      "237": "7:55 p.m. to 7:59 p.m.",
-      "238": "8:00 p.m. to 8:04 p.m.",
-      "240": "8:10 p.m. to 8:14 p.m.",
-      "242": "8:20 p.m. to 8:24 p.m.",
-      "245": "8:35 p.m. to 8:39 p.m.",
-      "250": "9:00 p.m. to 9:04 p.m.",
-      "275": "11:05 p.m. to 11:09 p.m.",
-      "283": "11:45 p.m. to 11:49 p.m.",
-      "285": "11:55 p.m. to 11:59 p.m.",
-      "012": "1:05 a.m. to 1:09 a.m.",
-      "024": "2:10 a.m. to 2:14 a.m.",
-      "026": "2:20 a.m. to 2:24 a.m.",
-      "027": "2:25 a.m. to 2:29 a.m.",
-      "030": "2:40 a.m. to 2:44 a.m.",
-      "032": "2:50 a.m. to 2:54 a.m.",
-      "040": "3:30 a.m. to 3:34 a.m.",
-      "045": "3:55 a.m. to 3:59 a.m.",
-      "047": "4:05 a.m. to 4:09 a.m.",
-      "063": "5:25 a.m. to 5:29 a.m.",
-      "066": "5:40 a.m. to 5:44 a.m.",
-      "086": "7:20 a.m. to 7:24 a.m.",
-      "096": "8:10 a.m. to 8:14 a.m.",
-      "099": "8:25 a.m. to 8:29 a.m.",
-      "102": "8:40 a.m. to 8:44 a.m.",
-      "109": "9:15 a.m. to 9:19 a.m.",
-      "110": "9:20 a.m. to 9:24 a.m.",
-      "112": "9:30 a.m. to 9:34 a.m.",
-      "113": "9:35 a.m. to 9:39 a.m.",
-      "115": "9:45 a.m. to 9:49 a.m.",
-      "120": "10:10 a.m. to 10:14 a.m.",
-      "127": "10:45 a.m. to 10:49 a.m.",
-      "130": "11:00 a.m. to 11:04 a.m.",
-      "131": "11:05 a.m. to 11:09 a.m.",
-      "145": "12:15 p.m. to 12:19 p.m.",
-      "159": "1:25 p.m. to 1:29 p.m.",
-      "168": "2:10 p.m. to 2:14 p.m.",
-      "176": "2:50 p.m. to 2:54 p.m.",
-      "188": "3:50 p.m. to 3:54 p.m.",
-      "195": "4:25 p.m. to 4:29 p.m.",
-      "213": "5:55 p.m. to 5:59 p.m.",
-      "229": "7:15 p.m. to 7:19 p.m.",
-      "231": "7:25 p.m. to 7:29 p.m."
-jwdp - Time of departure for work - hour and minute
-      "014": "4:10 a.m. to 4:19 a.m.",
-      "015": "4:20 a.m. to 4:29 a.m.",
-      "017": "4:40 a.m. to 4:49 a.m.",
-      "022": "5:15 a.m. to 5:19 a.m.",
-      "035": "6:20 a.m. to 6:24 a.m.",
-      "046": "7:15 a.m. to 7:19 a.m.",
-      "065": "8:50 a.m. to 8:54 a.m.",
-      "068": "9:05 a.m. to 9:09 a.m.",
-      "076": "9:45 a.m. to 9:49 a.m.",
-      "079": "10:00 a.m. to 10:09 a.m.",
-      "083": "10:40 a.m. to 10:49 a.m.",
-      "085": "11:00 a.m. to 11:09 a.m.",
-      "086": "11:10 a.m. to 11:19 a.m.",
-      "103": "2:00 p.m. to 2:09 p.m.",
-      "105": "2:20 p.m. to 2:29 p.m.",
-      "118": "4:30 p.m. to 4:39 p.m.",
-      "127": "6:00 p.m. to 6:09 p.m.",
-      "130": "6:30 p.m. to 6:39 p.m.",
-      "131": "6:40 p.m. to 6:49 p.m.",
-      "139": "9:20 p.m. to 9:29 p.m.",
-      "141": "9:40 p.m. to 9:49 p.m.",
-      "149": "11:00 p.m. to 11:29 p.m.",
-      "057": "8:10 a.m. to 8:14 a.m.",
-      "059": "8:20 a.m. to 8:24 a.m.",
-      "063": "8:40 a.m. to 8:44 a.m.",
-      "066": "8:55 a.m. to 8:59 a.m.",
-      "073": "9:30 a.m. to 9:34 a.m.",
-      "078": "9:55 a.m. to 9:59 a.m.",
-      "100": "1:30 p.m. to 1:39 p.m.",
-      "101": "1:40 p.m. to 1:49 p.m.",
-      "104": "2:10 p.m. to 2:19 p.m.",
-      "107": "2:40 p.m. to 2:49 p.m.",
-      "111": "3:20 p.m. to 3:29 p.m.",
-      "116": "4:10 p.m. to 4:19 p.m.",
-      "128": "6:10 p.m. to 6:19 p.m.",
-      "150": "11:30 p.m. to 11:59 p.m.",
-      "0": "N/A (not a worker; worker who worked from home)",
-      "010": "3:30 a.m. to 3:39 a.m.",
-      "011": "3:40 a.m. to 3:49 a.m.",
-      "019": "5:00 a.m. to 5:04 a.m.",
-      "028": "5:45 a.m. to 5:49 a.m.",
-      "044": "7:05 a.m. to 7:09 a.m.",
-      "045": "7:10 a.m. to 7:14 a.m.",
-      "047": "7:20 a.m. to 7:24 a.m.",
-      "049": "7:30 a.m. to 7:34 a.m.",
-      "053": "7:50 a.m. to 7:54 a.m.",
-      "055": "8:00 a.m. to 8:04 a.m.",
-      "056": "8:05 a.m. to 8:09 a.m.",
-      "084": "10:50 a.m. to 10:59 a.m.",
-      "090": "11:50 a.m. to 11:59 a.m.",
-      "092": "12:10 p.m. to 12:19 p.m.",
-      "110": "3:10 p.m. to 3:19 p.m.",
-      "112": "3:30 p.m. to 3:39 p.m.",
-      "120": "4:50 p.m. to 4:59 p.m.",
-      "132": "6:50 p.m. to 6:59 p.m.",
-      "133": "7:00 p.m. to 7:29 p.m.",
-      "134": "7:30 p.m. to 7:59 p.m.",
-      "009": "3:20 a.m. to 3:29 a.m.",
-      "023": "5:20 a.m. to 5:24 a.m.",
-      "031": "6:00 a.m. to 6:04 a.m.",
-      "038": "6:35 a.m. to 6:39 a.m.",
-      "040": "6:45 a.m. to 6:49 a.m.",
-      "050": "7:35 a.m. to 7:39 a.m.",
-      "060": "8:25 a.m. to 8:29 a.m.",
-      "062": "8:35 a.m. to 8:39 a.m.",
-      "064": "8:45 a.m. to 8:49 a.m.",
-      "067": "9:00 a.m. to 9:04 a.m.",
-      "069": "9:10 a.m. to 9:14 a.m.",
-      "082": "10:30 a.m. to 10:39 a.m.",
-      "095": "12:40 p.m. to 12:49 p.m.",
-      "096": "12:50 p.m. to 12:59 p.m.",
-      "097": "1:00 p.m. to 1:09 p.m.",
-      "119": "4:40 p.m. to 4:49 p.m.",
-      "121": "5:00 p.m. to 5:09 p.m.",
-      "135": "8:00 p.m. to 8:29 p.m.",
-      "003": "1:00 a.m. to 1:29 a.m.",
-      "033": "6:10 a.m. to 6:14 a.m.",
-      "036": "6:25 a.m. to 6:29 a.m.",
-      "041": "6:50 a.m. to 6:54 a.m.",
-      "061": "8:30 a.m. to 8:34 a.m.",
-      "081": "10:20 a.m. to 10:29 a.m.",
-      "093": "12:20 p.m. to 12:29 p.m.",
-      "098": "1:10 p.m. to 1:19 p.m.",
-      "102": "1:50 p.m. to 1:59 p.m.",
-      "109": "3:00 p.m. to 3:09 p.m.",
-      "115": "4:00 p.m. to 4:09 p.m.",
-      "126": "5:50 p.m. to 5:59 p.m.",
-      "143": "10:00 p.m. to 10:09 p.m.",
-      "145": "10:20 p.m. to 10:29 p.m.",
-      "001": "12:00 a.m. to 12:29 a.m.",
-      "006": "2:30 a.m. to 2:59 a.m.",
-      "012": "3:50 a.m. to 3:59 a.m.",
-      "013": "4:00 a.m. to 4:09 a.m.",
-      "016": "4:30 a.m. to 4:39 a.m.",
-      "025": "5:30 a.m. to 5:34 a.m.",
-      "026": "5:35 a.m. to 5:39 a.m.",
-      "030": "5:55 a.m. to 5:59 a.m.",
-      "077": "9:50 a.m. to 9:54 a.m.",
-      "087": "11:20 a.m. to 11:29 a.m.",
-      "088": "11:30 a.m. to 11:39 a.m.",
-      "094": "12:30 p.m. to 12:39 p.m.",
-      "106": "2:30 p.m. to 2:39 p.m.",
-      "108": "2:50 p.m. to 2:59 p.m.",
-      "122": "5:10 p.m. to 5:19 p.m.",
-      "123": "5:20 p.m. to 5:29 p.m.",
-      "124": "5:30 p.m. to 5:39 p.m.",
-      "144": "10:10 p.m. to 10:19 p.m.",
-      "002": "12:30 a.m. to 12:59 a.m.",
-      "004": "1:30 a.m. to 1:59 a.m.",
-      "005": "2:00 a.m. to 2:29 a.m.",
-      "007": "3:00 a.m. to 3:09 a.m.",
-      "020": "5:05 a.m. to 5:09 a.m.",
-      "021": "5:10 a.m. to 5:14 a.m.",
-      "024": "5:25 a.m. to 5:29 a.m.",
-      "027": "5:40 a.m. to 5:44 a.m.",
-      "034": "6:15 a.m. to 6:19 a.m.",
-      "039": "6:40 a.m. to 6:44 a.m.",
-      "042": "6:55 a.m. to 6:59 a.m.",
-      "043": "7:00 a.m. to 7:04 a.m.",
-      "048": "7:25 a.m. to 7:29 a.m.",
-      "051": "7:40 a.m. to 7:44 a.m.",
-      "058": "8:15 a.m. to 8:19 a.m.",
-      "072": "9:25 a.m. to 9:29 a.m.",
-      "074": "9:35 a.m. to 9:39 a.m.",
-      "075": "9:40 a.m. to 9:44 a.m.",
-      "091": "12:00 p.m. to 12:09 p.m.",
-      "113": "3:40 p.m. to 3:49 p.m.",
-      "117": "4:20 p.m. to 4:29 p.m.",
-      "125": "5:40 p.m. to 5:49 p.m.",
-      "129": "6:20 p.m. to 6:29 p.m.",
-      "136": "8:30 p.m. to 8:59 p.m.",
-      "137": "9:00 p.m. to 9:09 p.m.",
-      "140": "9:30 p.m. to 9:39 p.m.",
-      "008": "3:10 a.m. to 3:19 a.m.",
-      "018": "4:50 a.m. to 4:59 a.m.",
-      "029": "5:50 a.m. to 5:54 a.m.",
-      "032": "6:05 a.m. to 6:09 a.m.",
-      "037": "6:30 a.m. to 6:34 a.m.",
-      "052": "7:45 a.m. to 7:49 a.m.",
-      "054": "7:55 a.m. to 7:59 a.m.",
-      "070": "9:15 a.m. to 9:19 a.m.",
-      "071": "9:20 a.m. to 9:24 a.m.",
-      "080": "10:10 a.m. to 10:19 a.m.",
-      "089": "11:40 a.m. to 11:49 a.m.",
-      "099": "1:20 p.m. to 1:29 p.m.",
-      "114": "3:50 p.m. to 3:59 p.m.",
-      "138": "9:10 p.m. to 9:19 p.m.",
-      "142": "9:50 p.m. to 9:59 p.m.",
-      "146": "10:30 p.m. to 10:39 p.m.",
-      "147": "10:40 p.m. to 10:49 p.m.",
-      "148": "10:50 p.m. to 10:59 p.m."
-jwmnp - Travel time to work
-      "0": "N/A (not a worker or worker who worked at home)"
-    },
-    "range": [
-      {
-        "min": "1",
-        "max": "200",
-        "description": "1 to 200 minutes to get to work (Top-coded)"
-sex
-      "1": "Male",
-      "2": "Female"
-fer - Gave birth to child within the past 12 months
-      "0": "N/A (less than 15 years/greater than 50 years/ male)",
-      "2": "No",
-      "1": "Yes"
-hhl - Household language
-      "0": "N/A (GQ/vacant)",
-      "2": "Spanish",
-      "3": "Other Indo-European languages",
-      "1": "English Only",
-      "4": "Asian and Pacific Island languages",
-      "5": "Other Language"
-hispeed - Broadband (high speed) Internet service such as cable, fiber optic, or DSL service
-      "2": "No",
-      "1": "Yes",
-      "0": "N/A (GQ/vacant/no paid access to the internet
-jwtrns - Means of transportation to work
-      "11": "Worked from home",
-      "07": "Taxicab",
-      "02": "Bus",
-      "05": "Light rail, streetcar, or trolley",
-      "0": "N/A (not a worker-not in the labor force, including persons under 16 years; unemployed; employed, with a job but not at work; Armed Forces, with a job but not at work)",
-      "12": "Other method",
-      "04": "Long-distance train or commuter rail",
-      "09": "Bicycle",
-      "01": "Car, truck, or van",
-      "03": "Subway or elevated rail",
-      "06": "Ferryboat",
-      "10": "Walked",
-      "08": "Motorcycle"
-sch - School enrollment
-      "0": "N/A (less than 3 years old)",
-      "3": "Yes, private school or college or home school",
-      "1": "No, has not attended in the last 3 months",
-      "2": "Yes, public school or public college"
-schl - Educational attainment
-      "16": "Regular high school diploma",
-      "01": "No schooling completed",
-      "04": "Grade 1",
-      "03": "Kindergarten",
-      "07": "Grade 4",
-      "23": "Professional degree beyond a bachelor's degree",
-      "19": "1 or more years of college credit, no degree",
-      "22": "Master's degree",
-      "10": "Grade 7",
-      "20": "Associate's degree",
-      "0": "N/A (less than 3 years old)",
-      "02": "Nursery school, preschool",
-      "21": "Bachelor's degree",
-      "08": "Grade 5",
-      "24": "Doctorate degree",
-      "06": "Grade 3",
-      "14": "Grade 11",
-      "17": "GED or alternative credential",
-      "12": "Grade 9",
-      "15": "12th grade - no diploma",
-      "13": "Grade 10",
-      "05": "Grade 2",
-      "11": "Grade 8",
-      "18": "Some college, but less than 1 year",
-      "09": "Grade 6"
+### Fcn: Query Multiple Years
 
-
-
-## Validating query function (single year)
-Now, let's run some sample calls.
+This final function will take a set of 1+ years, loop through calls to query the Census on each year endpoint, then combine and format and return a single tibble!
 
 ```{r}
-year=2022
-test_results <- getToTibble(
-  queryCensus(year,catVars=c('SEX','HISPEED'),geoLevel='Division',geoSubset = 2,numVars=c('AGEP','PWGTP','GASP'))
-)
+# function:
+#   queryMultipleYears(years=c(2022),numVars,catVars,geoLevel,geoSubset)
+
+# purpose:
+#   Loop through calls to get query for each year, then combine and format, and return the final single tibble of data. Year is a column added to the results of each query.
+
+# arguments: 
+#   years - vector of numeric indicating each year of interest
+#   numVars - vector of chars, 1 or more
+#   catVars - vector of chars, 1 or more
+#   geoLevel - one string matching permitted values
+#   geoSubset - vector of chars, 1 or more, for subset by geoLevel (no restrictions)
+
+# returns: 
+#   Complete, consolidated, formatted tibble
+
+# error handling: 
+#   none!!
+
+queryMultipleYears <- function(years=c(2022),numVars=c('AGEP','PWGTP'),catVars=c('SEX'),geoLevel='State',geoSubset=17) {
+  
+  #init large_tibble
+  large_tibble <- tibble()
+  
+  #loop through all years in vector
+  for (years_i in years) {
+    
+    #query the api
+    results_query_i <- queryCensus(years_i,numVars,catVars)#,geoLevel,geoSubset)
+    
+    #translate to a tibble
+    tibble_query_i <- getToTibble(results_query_i)
+    
+    #append the year variable
+    tibble_query_i['Year'] <- years_i
+    
+    #add to large tibble
+    large_tibble <- bind_rows(large_tibble,tibble_query_i)
+    
+  }
+  
+  #format
+  large_tibble_formatted <- formatResults(large_tibble)
+  
+  #remove any NA rows which happened due to headers in every query
+  large_tibble_formatted <- filter(large_tibble_formatted,!is.na(large_tibble_formatted[[1]]))
+  
+  #return
+  return(large_tibble_formatted)
+}
+```
+
+    -   Conditions:
+        -   Call single year function repeatedly as needed.
+        -   Combine data into one final tibble, including `year` variable.
+
+
+## Validate Custom Query Function (1yr)
+
+Now, let's run some sample calls. First, a call with no arguments, relying solely on defaults.
+
+```{r}
+test_results <- getToTibble(queryCensus())
 test_results
 ```
 
-
-
-
-Success! Let's try ALL OF THEM.
+Success! Next, let's try every possible parameter. For simplicity, we will use State=17.
 
 ```{r}
-year=2022
 test_results <- getToTibble(
-  queryCensus(year,
+  queryCensus(2022,
               catVars=c('SEX','HISPEED','FER','HHL','JWTRNS','SCH','SCHL'),
               geoLevel='State',
               geoSubset = 17,
@@ -1143,29 +756,40 @@ test_results <- getToTibble(
 test_results
 ```
 
-*Note that if syntax changes or limitations exist for other years of data (for instance, say 'HISPEED' was not available in year X), requests may fail.*
+Success! Now, let's apply the formatting function to replace categorical enumerated elements, make numeric columns into numberic type, and fix column names.
 
-Now, let's try using the formatting function to replace categorical variables and make numeric into numbers.
 ```{r}
-test_results_formatted <- formatResults(test_results,year)
-
-
-```
-```{r}
+test_results_formatted <- formatResults(test_results)
 test_results_formatted
 ```
 
+Success!
 
+## Validate Multi-Year Query Function
 
-4.  Write a function to allow user to specify multiple years of survey data **and** all other options above.
+Lastly, let's call the function for multi-year results in a single tibble. Start simple with defaults, first.
 
-    -   Conditions:
-        -   Call single year function repeatedly as needed.
-        -   Combine data into one final tibble, including `year` variable.
+```{r}
+multi_test_tibble <- queryMultipleYears(years=c(2021,2022))
+multi_test_tibble
+```
 
-# Person Level Records
+Success! Now, once more with all variables and a third year.
 
-The Census data returns a form of compressed results, where identical rows representing multiple people are condensed to one row with the field `PWGTP` representing the number of observations (people) associated with that row. We will not replicate these rows to keep our table smaller and simpler, but it must be considered for data summarization to ensure proper proportions are understood.
+```{r}
+multi_test_tibble_2 <- queryMultipleYears(years=c(2019,2021,2022),
+                                          catVars=c('SEX','HISPEED','FER','HHL','JWTRNS','SCH','SCHL'),
+                                          geoLevel='State',
+                                          geoSubset = 17,
+                                          numVars=c('AGEP','PWGTP','GASP','GRPIP','JWAP','JWDP','JWMNP') )
+multi_test_tibble_2
+```
+
+Success! Wow!
+
+# Note on Person Level Records
+
+The Census data returns a form of compressed results, where identical rows representing multiple people are condensed to one row with the field `PWGTP` representing the number of observations (people) associated with that row. We will not replicate these rows to keep our table smaller and simpler, but it must be considered for data summarization to ensure proper proportions/weights are incorporated.
 
 # Summarizing...
 

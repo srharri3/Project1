@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.4.555">
+<meta name="generator" content="quarto-1.5.57">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -34,7 +34,7 @@ div.sourceCode { overflow: auto; }
 }
 @media print {
 pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
 }
 pre.numberSource code
   { counter-reset: source-line 0; }
@@ -142,39 +142,141 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <section id="introduction" class="level1">
 <h1>Introduction</h1>
-<p>This project demonstrates use of R for manipulating and processing census datasets via API. Generic functions will auto-summarize and auto-plot returned data. The document will describe how these function and provide examples.</p>
+<p>This project demonstrates the use of R for collecting, processing, and studying US Census data via its API. The data processing functions will allow a variety of fields to be pulled or subset, via their arguments. Data summary functions will auto-summarize and auto-plot the returned data. Lastly, we add commentary and analysis of some points of interest.</p>
 </section>
 <section id="data-source" class="level1">
 <h1>Data Source</h1>
-<p>We will query the <em>Public Use Microdata Sample (PUMS) Census API</em>. The API offers <em>pseudo person-level</em> data. To demonstrate our functions while avoiding memory errors, we will default to a subset of state 14 data. Users may adjust this within our function calls.</p>
-<section id="resources" class="level2">
-<h2 class="anchored" data-anchor-id="resources">Resources</h2>
+<p>We will query the <em>Public Use Microdata Sample (PUMS) Census API</em>. The API offers <em>pseudo person-level</em> data. To demonstrate our functions while avoiding memory errors, we will default to a subset of data from state 17 Illinois. Users may adjust this subset and fields pulled via function arguments.</p>
+<section id="api-resources" class="level2">
+<h2 class="anchored" data-anchor-id="api-resources">API Resources</h2>
 <ul>
 <li><a href="https://www.census.gov/data/developers/data-sets/census-microdata-api.html">Information about the PUMS API</a></li>
 <li><a href="https://api.census.gov/data/2022/acs/acs1/pums/variables.html">Variable list (2022)</a></li>
 <li><a href="https://api.census.gov/data/2022/acs/acs1/pums/examples.html">API call examples</a></li>
 <li><a href="https://data.census.gov/mdat/#/">Menu-based API call explorer</a></li>
-<li>Sample: <code>api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR&amp;SCHL=24&amp;key=YOUR_KEY</code></li>
+<li>Sample API call: <code>api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR&amp;SCHL=24&amp;key=YOUR_KEY</code></li>
 </ul>
 </section>
-<section id="user-choices" class="level2">
-<h2 class="anchored" data-anchor-id="user-choices">User Choices</h2>
-<p>User may choose particular variables or conditions (subsets) to be returned.</p>
+<section id="api-fields" class="level2">
+<h2 class="anchored" data-anchor-id="api-fields">API Fields</h2>
+<p>Per the syllabus, our functions will accommodate retrieval of the following fields.</p>
+<ol type="1">
+<li>Year of survey
+<ul>
+<li>Default:
+<ul>
+<li>2022</li>
+</ul></li>
+<li>Valid:
+<ul>
+<li>Integer in [2010,2022]</li>
+</ul></li>
+<li>Conditions:
+<ul>
+<li>In query function, only one year is accessed per query. Multiple years will be looped with multiple calls.</li>
+</ul></li>
+</ul></li>
+<li>Numeric var(s)
+<ul>
+<li>Default:
+<ul>
+<li>AGEP</li>
+<li>PWGTP (always)</li>
+</ul></li>
+<li>Valid:
+<ul>
+<li>AGEP</li>
+<li>GASP</li>
+<li>GRPIP</li>
+<li>JWAP (time)</li>
+<li>JWDP (time)</li>
+<li>JWMNP</li>
+</ul></li>
+<li>Conditions:
+<ul>
+<li>Translate variables to numeric or time (middle of period) as applicable.</li>
+<li>PWGTP and at least one additional numeric var must be returned.</li>
+<li>Ensure valid user entries.</li>
+</ul></li>
+</ul></li>
+<li>Categorical var(s)
+<ul>
+<li>Default:
+<ul>
+<li>SEX</li>
+</ul></li>
+<li>Valid:
+<ul>
+<li>FER</li>
+<li>HHL</li>
+<li>HISPEED</li>
+<li>JWTRNS</li>
+<li>SCH</li>
+<li>SCHL</li>
+<li>SEX</li>
+</ul></li>
+<li>Conditions:
+<ul>
+<li>Translate variables into factors with appropriate levels as applicable.</li>
+<li>At least one categorical variable must be returned.</li>
+<li>Ensure valid user entries.</li>
+</ul></li>
+</ul></li>
+<li>Geography level
+<ul>
+<li>Default:
+<ul>
+<li>All</li>
+</ul></li>
+<li>Valid:
+<ul>
+<li>All</li>
+<li>Region</li>
+<li>Division</li>
+<li>State</li>
+</ul></li>
+<li>Conditions:
+<ul>
+<li>One selection only.</li>
+<li>Ensure valid user entries.</li>
+</ul></li>
+</ul></li>
+<li>Geography subsets
+<ul>
+<li>Default:
+<ul>
+<li>17</li>
+</ul></li>
+<li>Valid:
+<ul>
+<li>N/A (no error checking provided)</li>
+</ul></li>
+<li>Conditions:
+<ul>
+<li>User can specify specific Regions, Divisions, or States.</li>
+<li>Only specific levels selected will be returned.</li>
+</ul></li>
+</ul></li>
+</ol>
 </section>
 </section>
 <section id="data-processing" class="level1">
 <h1>Data Processing</h1>
-<p>We will follow these steps for data processing:</p>
+<section id="plan" class="level2">
+<h2 class="anchored" data-anchor-id="plan">Plan</h2>
+<p>We will follow these steps to develop our data processing functions.</p>
 <ol type="1">
-<li><p>Achieve a basic call to a sample API endpoint, returning a tibble.</p></li>
-<li><p>Write a <em>helper</em> function to take the return from <code>GET()</code> and modify it into a <code>tibble</code>.</p></li>
-<li><p>Write a function to query API, with editable parameters.</p></li>
-<li><p>Write a function to allow user to specify multiple years of survey data <strong>and</strong> all other options above.</p></li>
+<li><p>Begin by testing a sample API call.</p></li>
+<li><p>Develop a helper function to process results from <code>GET()</code> into a useful <code>tibble</code>.</p></li>
+<li><p>Develop a function to build and query the API according to user parameters, for one year.</p></li>
+<li><p>Develop a function to process the API results into proper variable types and factors.</p></li>
+<li><p>Develop a function to allow for multi-year query handling, processing the result into a single <code>tibble</code>.</p></li>
 </ol>
-<p>More details including valid arguments, etc. will be listed below, as we address each step.</p>
+<p><em>Note that if syntax changes or limitations exist for certain years of data (for instance, say ‘HISPEED’ was not available in year X), requests may fail. All functions are tested and validated for the 2022 API endpoint, at a minimum.</em></p>
+</section>
 <section id="libraries" class="level2">
 <h2 class="anchored" data-anchor-id="libraries">Libraries</h2>
-<p>Ensuring we have the appropriate libraries for the project and task.</p>
+<p>Loading necessary libraries for API processing and tidyverse functions.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">#to help with parsing contents of API calls</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(jsonlite)</span>
@@ -212,21 +314,29 @@ Attaching package: 'tidyr'</code></pre>
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(RSQLite)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
-<section id="test-call-to-the-census-api" class="level2">
-<h2 class="anchored" data-anchor-id="test-call-to-the-census-api">Test call to the Census API</h2>
-<p>Before we build functions, let’s just make a simple call without any API key, to ensure it works as expected.</p>
+<section id="sample-api-test" class="level2">
+<h2 class="anchored" data-anchor-id="sample-api-test">Sample API Test</h2>
+<p>Before we build functions, let’s just make a simple call to ensure we understand how to build the query and process its results.</p>
+<p>We will call this sample URL: <code>https://api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR,ST&amp;SCHL=24</code></p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co">#base URL for example: api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR&amp;SCHL=24&amp;key=YOUR_KEY</span></span>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co">#build URL</span></span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>test_URL <span class="ot">&lt;-</span> <span class="st">"https://api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR,ST&amp;SCHL=24"</span></span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>test_results <span class="ot">&lt;-</span> <span class="fu">GET</span>(test_URL)</span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>test_parsed_content <span class="ot">=</span> <span class="fu">fromJSON</span>(<span class="fu">rawToChar</span>(test_results<span class="sc">$</span>content))</span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>test_tibble <span class="ot">=</span> <span class="fu">as_tibble</span>(test_parsed_content)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="co">#get url</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>test_results <span class="ot">&lt;-</span> <span class="fu">GET</span>(test_URL)</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="co">#pull content JSON branch and convert to char</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>test_parsed_content <span class="ot">&lt;-</span> <span class="fu">fromJSON</span>(<span class="fu">rawToChar</span>(test_results<span class="sc">$</span>content))</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a><span class="co">#convert to tibble</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>test_tibble <span class="ot">&lt;-</span> <span class="fu">as_tibble</span>(test_parsed_content)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
 <pre><code>Warning: The `x` argument of `as_tibble.matrix()` must have unique column names if
 `.name_repair` is omitted as of tibble 2.0.0.
 ℹ Using compatibility `.name_repair`.</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>test_tibble</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co">#display test</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>test_tibble</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 44,080 × 5
    V1    V2    V3    V4    V5   
@@ -246,613 +356,622 @@ Attaching package: 'tidyr'</code></pre>
 </div>
 <p>Success!</p>
 </section>
-<section id="function-from-get-to-tibble" class="level2">
-<h2 class="anchored" data-anchor-id="function-from-get-to-tibble">Function from GET to tibble</h2>
-<p>Now, let’s write the helper function that takes a GET result and produces a nice tibble.</p>
+<section id="helper-functions" class="level2">
+<h2 class="anchored" data-anchor-id="helper-functions">Helper Functions</h2>
+<section id="fcn-get-lookup-table" class="level3">
+<h3 class="anchored" data-anchor-id="fcn-get-lookup-table">Fcn: Get Lookup [Table]</h3>
+<p>In order to process API results into proper variable types and factors, we use this helper function to pull the lookup table for a provided variable.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># function getToTibble</span></span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="co"># purpose: Take results from a Census GET call, which come back with raw JSON, and transform them into a usable tibble that shows only the retrieved content in a friendly format.</span></span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="co"># arguments: get_results (the result of a prior call to GET() on the Census API)</span></span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="co"># returns: tibble corresponding to the parsed, json, raw to char 'content' element of the original GET result</span></span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="co"># error handling: none; only call this function when a valid argument is ready</span></span>
-<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>getToTibble <span class="ot">&lt;-</span> <span class="cf">function</span>(get_results) {</span>
-<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>  parsed_results <span class="ot">=</span> <span class="fu">fromJSON</span>(<span class="fu">rawToChar</span>(get_results<span class="sc">$</span>content))</span>
-<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>  tibble_results <span class="ot">=</span> <span class="fu">as_tibble</span>(parsed_results)</span>
-<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(tibble_results)</span>
-<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a><span class="co">#check for same end result as original test</span></span>
-<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a><span class="fu">getToTibble</span>(test_results)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 44,080 × 5
-   V1    V2    V3    V4    V5   
-   &lt;chr&gt; &lt;chr&gt; &lt;chr&gt; &lt;chr&gt; &lt;chr&gt;
- 1 SEX   PWGTP MAR   ST    SCHL 
- 2 2     6     5     17    24   
- 3 2     23    2     06    24   
- 4 1     23    3     42    24   
- 5 1     80    5     49    24   
- 6 1     16    1     18    24   
- 7 1     107   3     18    24   
- 8 2     10    5     13    24   
- 9 1     22    1     39    24   
-10 2     127   5     32    24   
-# ℹ 44,070 more rows</code></pre>
-</div>
-</div>
-<p>Success!</p>
-</section>
-<section id="function-to-get-lookup-tables-for-variable-replacements" class="level2">
-<h2 class="anchored" data-anchor-id="function-to-get-lookup-tables-for-variable-replacements">Function to get lookup tables for variable replacements</h2>
-<p>We need to replace encoded values with labels from the variable lookups. This requires additional GET calls to a JSON definition URL, parsing, and returning the lookup table with clean row indices and column results.</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># function getLookup</span></span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="co"># purpose: Format and call API to get variable lookup data. Return the list of key and values.</span></span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="co"># arguments: varName - the variable we want to pull</span></span>
-<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a><span class="co">#            year - the year of the data dictionary to pull</span></span>
-<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="co"># returns: list of key and lookup values</span></span>
-<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a><span class="co"># error handling: none; only call this function with valid variable name and year</span></span>
-<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a><span class="co"># https://api.census.gov/data/YEAR/acs/acs1/pums/variables/VARNAME.json</span></span>
-<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>getLookup <span class="ot">&lt;-</span> <span class="cf">function</span>(varName, <span class="at">year=</span><span class="dv">2022</span>) {</span>
-<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>  <span class="co">#prepare url</span></span>
-<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>  lookup_URL_base1 <span class="ot">&lt;-</span> <span class="st">'https://api.census.gov/data/'</span></span>
-<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>  lookup_URL_base2 <span class="ot">&lt;-</span> <span class="st">'/acs/acs1/pums/variables/'</span></span>
-<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>  lookup_URL_suffix <span class="ot">&lt;-</span> <span class="st">'.json'</span></span>
-<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a>  lookup_URL <span class="ot">&lt;-</span> <span class="fu">paste</span>(lookup_URL_base1,</span>
-<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a>                     year,</span>
-<span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a>                     lookup_URL_base2,</span>
-<span id="cb15-17"><a href="#cb15-17" aria-hidden="true" tabindex="-1"></a>                     varName,</span>
-<span id="cb15-18"><a href="#cb15-18" aria-hidden="true" tabindex="-1"></a>                     lookup_URL_suffix,</span>
-<span id="cb15-19"><a href="#cb15-19" aria-hidden="true" tabindex="-1"></a>                     <span class="at">sep =</span> <span class="st">''</span>,</span>
-<span id="cb15-20"><a href="#cb15-20" aria-hidden="true" tabindex="-1"></a>                     <span class="at">collapse =</span> <span class="st">''</span>)</span>
-<span id="cb15-21"><a href="#cb15-21" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb15-22"><a href="#cb15-22" aria-hidden="true" tabindex="-1"></a>  <span class="co">#pull result and get tibble, keep only the values/items</span></span>
-<span id="cb15-23"><a href="#cb15-23" aria-hidden="true" tabindex="-1"></a>  lookup_URL_result <span class="ot">&lt;-</span> <span class="fu">GET</span>(lookup_URL) <span class="sc">|&gt;</span> <span class="fu">getToTibble</span>()</span>
-<span id="cb15-24"><a href="#cb15-24" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb15-25"><a href="#cb15-25" aria-hidden="true" tabindex="-1"></a>  <span class="co">#keep only the needed parts</span></span>
-<span id="cb15-26"><a href="#cb15-26" aria-hidden="true" tabindex="-1"></a>  lookup_valuesItem <span class="ot">&lt;-</span> lookup_URL_result<span class="sc">$</span>values<span class="sc">$</span>item</span>
-<span id="cb15-27"><a href="#cb15-27" aria-hidden="true" tabindex="-1"></a>  lookup_list <span class="ot">&lt;-</span> lookup_valuesItem[<span class="fu">sort</span>(<span class="fu">names</span>(lookup_valuesItem))]</span>
-<span id="cb15-28"><a href="#cb15-28" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb15-29"><a href="#cb15-29" aria-hidden="true" tabindex="-1"></a>  <span class="co">#format as a long tibble</span></span>
-<span id="cb15-30"><a href="#cb15-30" aria-hidden="true" tabindex="-1"></a>  lookup_tibble <span class="ot">&lt;-</span> lookup_list <span class="sc">|&gt;</span> <span class="fu">as_tibble</span>() <span class="sc">|&gt;</span> <span class="fu">pivot_longer</span>(<span class="at">cols=</span><span class="fu">everything</span>())</span>
-<span id="cb15-31"><a href="#cb15-31" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb15-32"><a href="#cb15-32" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(lookup_tibble)</span>
-<span id="cb15-33"><a href="#cb15-33" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># function:</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="co">#   getLookup(varName,year=2022)</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="co"># purpose:</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="co">#   Format and call API to get variable lookup data. Returns a 2-column tibble of keys and labels.</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a><span class="co">#   Sample data dictionary call: https://api.census.gov/data/YEAR/acs/acs1/pums/variables/VARNAME.json</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a><span class="co"># arguments: </span></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a><span class="co">#   varName - the variable we want to pull</span></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a><span class="co">#   year - the year of the data dictionary to pull (default 2022)</span></span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a><span class="co"># returns: </span></span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a><span class="co">#   2-column tibble of keys and labels.</span></span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a><span class="co"># error handling: </span></span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a><span class="co">#   none!!</span></span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a>getLookup <span class="ot">&lt;-</span> <span class="cf">function</span>(varName, <span class="at">year=</span><span class="dv">2022</span>) {</span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a>  <span class="co">#prepare API dictionary call</span></span>
+<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a>  lookup_URL_base1 <span class="ot">&lt;-</span> <span class="st">'https://api.census.gov/data/'</span></span>
+<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a>  lookup_URL_base2 <span class="ot">&lt;-</span> <span class="st">'/acs/acs1/pums/variables/'</span></span>
+<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a>  lookup_URL_suffix <span class="ot">&lt;-</span> <span class="st">'.json'</span></span>
+<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a>  lookup_URL <span class="ot">&lt;-</span> <span class="fu">paste</span>(lookup_URL_base1,</span>
+<span id="cb13-25"><a href="#cb13-25" aria-hidden="true" tabindex="-1"></a>                      year,</span>
+<span id="cb13-26"><a href="#cb13-26" aria-hidden="true" tabindex="-1"></a>                      lookup_URL_base2,</span>
+<span id="cb13-27"><a href="#cb13-27" aria-hidden="true" tabindex="-1"></a>                      varName,</span>
+<span id="cb13-28"><a href="#cb13-28" aria-hidden="true" tabindex="-1"></a>                      lookup_URL_suffix,</span>
+<span id="cb13-29"><a href="#cb13-29" aria-hidden="true" tabindex="-1"></a>                      <span class="at">sep =</span> <span class="st">''</span>,</span>
+<span id="cb13-30"><a href="#cb13-30" aria-hidden="true" tabindex="-1"></a>                      <span class="at">collapse =</span> <span class="st">''</span>)</span>
+<span id="cb13-31"><a href="#cb13-31" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb13-32"><a href="#cb13-32" aria-hidden="true" tabindex="-1"></a>  <span class="co">#pull result and get tibble, keep only the values/items</span></span>
+<span id="cb13-33"><a href="#cb13-33" aria-hidden="true" tabindex="-1"></a>  lookup_URL_result <span class="ot">&lt;-</span> <span class="fu">GET</span>(lookup_URL) <span class="sc">|&gt;</span> <span class="fu">getToTibble</span>()</span>
+<span id="cb13-34"><a href="#cb13-34" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb13-35"><a href="#cb13-35" aria-hidden="true" tabindex="-1"></a>  <span class="co">#keep only the needed parts in values:item, order by keys</span></span>
+<span id="cb13-36"><a href="#cb13-36" aria-hidden="true" tabindex="-1"></a>  lookup_valuesItem <span class="ot">&lt;-</span> lookup_URL_result<span class="sc">$</span>values<span class="sc">$</span>item</span>
+<span id="cb13-37"><a href="#cb13-37" aria-hidden="true" tabindex="-1"></a>  lookup_list <span class="ot">&lt;-</span> lookup_valuesItem[<span class="fu">sort</span>(<span class="fu">names</span>(lookup_valuesItem))]</span>
+<span id="cb13-38"><a href="#cb13-38" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb13-39"><a href="#cb13-39" aria-hidden="true" tabindex="-1"></a>  <span class="co">#format as a long tibble</span></span>
+<span id="cb13-40"><a href="#cb13-40" aria-hidden="true" tabindex="-1"></a>  lookup_tibble <span class="ot">&lt;-</span> lookup_list <span class="sc">|&gt;</span> <span class="fu">as_tibble</span>() <span class="sc">|&gt;</span> <span class="fu">pivot_longer</span>(<span class="at">cols=</span><span class="fu">everything</span>())</span>
+<span id="cb13-41"><a href="#cb13-41" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb13-42"><a href="#cb13-42" aria-hidden="true" tabindex="-1"></a>  <span class="co">#return long, 2-column tibble</span></span>
+<span id="cb13-43"><a href="#cb13-43" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(lookup_tibble)</span>
+<span id="cb13-44"><a href="#cb13-44" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb13-45"><a href="#cb13-45" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
-<section id="function-to-customize-api-call-per-user-input" class="level2">
-<h2 class="anchored" data-anchor-id="function-to-customize-api-call-per-user-input">Function to customize API call per user input</h2>
-<p>This introduces a fair bit of complexity. We want to enable the user to query the API flexibly, as described below. In this function, we will ensure valid selections and query results for a specific year.</p>
-<p>To make this manageable, we will use helper functions for tasks like validating arguments.</p>
-<p><em>Note also that we will include and limit by default to a single ST (state) category, as mentioned in headers. Because <code>14</code> is not a valid state in the dataset, we will use the 14th available label, corresponding to ST=17 Illinois/IL. See <a href="https://api.census.gov/data/2022/acs/acs1/pums/variables/ST.json">ST list</a>.</em></p>
-<ol type="1">
-<li>Year of survey
-<ul>
-<li>Default:
-<ul>
-<li>2022</li>
-</ul></li>
-<li>Valid:
-<ul>
-<li>Integer in [2010,2022]</li>
-</ul></li>
-<li>Function: checkYear()</li>
-</ul></li>
-<li>Numeric var(s) to return
-<ul>
-<li>Default:
-<ul>
-<li>AGEP</li>
-<li>PWGTP (req)</li>
-</ul></li>
-<li>Valid:
-<ul>
-<li>AGEP</li>
-<li>GASP</li>
-<li>GRPIP</li>
-<li>JWAP (time)</li>
-<li>JWDP (time)</li>
-<li>JWMNP</li>
-</ul></li>
-<li>Conditions:
-<ul>
-<li>Translate variables to numeric or time (middle of period) as applicable.</li>
-<li>At least one numeric var other than PWGTP must be returned.</li>
-<li>Ensure valid user entries.</li>
-</ul></li>
-<li>Function: checkNumVars()</li>
-</ul></li>
-<li>Categorical var(s) to return
-<ul>
-<li>Default:
-<ul>
-<li>SEX</li>
-</ul></li>
-<li>Valid:
-<ul>
-<li>FER</li>
-<li>HHL</li>
-<li>HISPEED</li>
-<li>JWTRNS</li>
-<li>SCH</li>
-<li>SCHL</li>
-<li>SEX</li>
-</ul></li>
-<li>Conditions:
-<ul>
-<li>Translate variables into factors with appropriate levels as applicable.</li>
-<li>At least one categorical variable must be returned.</li>
-<li>Ensure valid user entries.</li>
-</ul></li>
-<li>Function: checkCatVars()</li>
-</ul></li>
-<li>Geography level
-<ul>
-<li>Default:
-<ul>
-<li>All</li>
-</ul></li>
-<li>Valid:
-<ul>
-<li>All</li>
-<li>Region</li>
-<li>Division</li>
-<li>State</li>
-</ul></li>
-<li>Conditions:
-<ul>
-<li>Ensure valid user entries.</li>
-</ul></li>
-<li>Function: checkGeo()</li>
-</ul></li>
-<li>Subset geo argument (to adjust API call made)
-<ul>
-<li>Conditions:
-<ul>
-<li>User can specify specific Regions, Divisions, or States.</li>
-<li>Only specific levels selected will be returned.</li>
-<li>Ensure valid user entries.</li>
-</ul></li>
-</ul></li>
-</ol>
-<section id="check-year" class="level3">
-<h3 class="anchored" data-anchor-id="check-year">Check year</h3>
-<ul>
-<li>Default:
-<ul>
-<li>2022</li>
-</ul></li>
-<li>Valid:
-<ul>
-<li>Integer in [2010,2022]</li>
-</ul></li>
-<li>Function: checkYear()</li>
-</ul>
+<section id="fcn-check-year" class="level3">
+<h3 class="anchored" data-anchor-id="fcn-check-year">Fcn: Check Year</h3>
+<p>This function takes an argument of <em>year</em> and returns <code>TRUE</code> if it is valid for our project.</p>
+<p>Valid arguments: A single year in the range [2010,2022]</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># function checkYear()</span></span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="co"># purpose: Confirm that passed integer value is within [2010,2022].</span></span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="co"># arguments: yr (integer)</span></span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a><span class="co"># returns: TRUE for a successful value, FALSE else (including error)</span></span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a><span class="co"># error handling: FALSE for non-int</span></span>
-<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>checkYear <span class="ot">&lt;-</span> <span class="cf">function</span>(yr) {</span>
-<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>  <span class="co">#set FALSE if non-int or out of bounds</span></span>
-<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>  pass <span class="ot">&lt;-</span> <span class="fu">case_when</span>(</span>
-<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>    yr<span class="sc">%%</span><span class="dv">1</span> <span class="sc">!=</span> <span class="dv">0</span> <span class="sc">~</span> <span class="cn">FALSE</span>,</span>
-<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>    yr <span class="sc">&lt;</span> <span class="dv">2010</span> <span class="sc">~</span> <span class="cn">FALSE</span>,</span>
-<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>    yr <span class="sc">&gt;</span> <span class="dv">2022</span> <span class="sc">~</span> <span class="cn">FALSE</span>,</span>
-<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>    <span class="cn">TRUE</span> <span class="sc">~</span> <span class="cn">TRUE</span></span>
-<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a>  <span class="co">#TRUE if valid</span></span>
-<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(pass)</span>
-<span id="cb16-18"><a href="#cb16-18" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># function:</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="co">#   checkYear(year)</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="co"># purpose:</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="co">#   Confirm that passed integer value is within [2010,2022].</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="co"># arguments: </span></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a><span class="co">#   year - the year to check</span></span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a><span class="co"># returns: </span></span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a><span class="co">#   TRUE for successful validation, FALSE else (including error)</span></span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a><span class="co"># error handling: </span></span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a><span class="co">#   FALSE for non-integer</span></span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a>checkYear <span class="ot">&lt;-</span> <span class="cf">function</span>(year) {</span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a>  validation <span class="ot">&lt;-</span> <span class="fu">case_when</span>(</span>
+<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a>    year<span class="sc">%%</span><span class="dv">1</span> <span class="sc">!=</span> <span class="dv">0</span> <span class="sc">~</span> <span class="cn">FALSE</span>, <span class="co">#non-int = FALSE</span></span>
+<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a>    year <span class="sc">&lt;</span> <span class="dv">2010</span> <span class="sc">~</span> <span class="cn">FALSE</span>,  <span class="co">#below 2010 = FALSE</span></span>
+<span id="cb14-21"><a href="#cb14-21" aria-hidden="true" tabindex="-1"></a>    year <span class="sc">&gt;</span> <span class="dv">2022</span> <span class="sc">~</span> <span class="cn">FALSE</span>,  <span class="co">#over 2022 = FALSE</span></span>
+<span id="cb14-22"><a href="#cb14-22" aria-hidden="true" tabindex="-1"></a>    <span class="cn">TRUE</span> <span class="sc">~</span> <span class="cn">TRUE</span>           <span class="co">#else = TRUE</span></span>
+<span id="cb14-23"><a href="#cb14-23" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb14-24"><a href="#cb14-24" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb14-25"><a href="#cb14-25" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(validation)</span>
+<span id="cb14-26"><a href="#cb14-26" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb14-27"><a href="#cb14-27" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
-<section id="numeric-vars" class="level3">
-<h3 class="anchored" data-anchor-id="numeric-vars">Numeric vars</h3>
-<ul>
-<li>Default:
-<ul>
-<li>AGEP</li>
-<li>PWGTP (req)</li>
-</ul></li>
-<li>Valid:
-<ul>
-<li>AGEP</li>
-<li>GASP</li>
-<li>GRPIP</li>
-<li>JWAP (time)</li>
-<li>JWDP (time)</li>
-<li>JWMNP</li>
-<li>PWGTP</li>
-</ul></li>
-<li>Conditions:
-<ul>
-<li>Translate variables to numeric or time (middle of period) as applicable.</li>
-<li>At least one numeric var other than PWGTP must be returned.</li>
-<li>Ensure valid user entries.</li>
-</ul></li>
-<li>Function: checkNumVars()</li>
-</ul>
+<section id="fcn-check-numeric-vars" class="level3">
+<h3 class="anchored" data-anchor-id="fcn-check-numeric-vars">Fcn: Check Num[eric] Vars</h3>
+<p>This function takes an argument of a vector of characters representing the set of numeric variables being requested. It validates them and returns <code>TRUE</code> if the entire set is valid.</p>
+<p>Valid arguments: 1+ strings only from the set [AGEP,GASP,GRPIP,JWAP,JWDP,JWMNP,PWGTP]</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># function checkNumVars()</span></span>
-<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="co"># purpose: Confirm that numeric variable names passed are within the legitimate set.</span></span>
-<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="co"># arguments: vars (vector of chars)</span></span>
-<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="co"># returns: TRUE for all successful values, FALSE else</span></span>
-<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a><span class="co"># error handling: none; assumes a vector of characters for expected behavior</span></span>
-<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>checkNumVars <span class="ot">&lt;-</span> <span class="cf">function</span>(vars) {</span>
-<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>  <span class="co">#init pass. If it remains TRUE, return will be TRUE (passes check)</span></span>
-<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>  pass <span class="ot">=</span> <span class="cn">TRUE</span></span>
-<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>  <span class="co">#cycle through all values in the vector</span></span>
-<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (var_i <span class="cf">in</span> vars) {</span>
-<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>    <span class="co">#if value of element not in list, toggle pass to FALSE</span></span>
-<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="sc">!</span>(var_i <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">'AGEP'</span>,</span>
-<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a>                       <span class="st">'GASP'</span>,</span>
-<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a>                       <span class="st">'GRPIP'</span>,</span>
-<span id="cb17-18"><a href="#cb17-18" aria-hidden="true" tabindex="-1"></a>                       <span class="st">'JWAP'</span>,</span>
-<span id="cb17-19"><a href="#cb17-19" aria-hidden="true" tabindex="-1"></a>                       <span class="st">'JWDP'</span>,</span>
-<span id="cb17-20"><a href="#cb17-20" aria-hidden="true" tabindex="-1"></a>                       <span class="st">'JWMNP'</span>,</span>
-<span id="cb17-21"><a href="#cb17-21" aria-hidden="true" tabindex="-1"></a>                       <span class="st">'PWGTP'</span>)))</span>
-<span id="cb17-22"><a href="#cb17-22" aria-hidden="true" tabindex="-1"></a>      pass <span class="ot">=</span> <span class="cn">FALSE</span></span>
-<span id="cb17-23"><a href="#cb17-23" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb17-24"><a href="#cb17-24" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb17-25"><a href="#cb17-25" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(pass)</span>
-<span id="cb17-26"><a href="#cb17-26" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># function:</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="co">#   checkNumVars(vars)</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a><span class="co"># purpose:</span></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="co">#   Confirm that numeric variable names passed are within the legitimate set.</span></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a><span class="co"># arguments: </span></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a><span class="co">#   vars - vector of chars</span></span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a><span class="co"># returns: </span></span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a><span class="co">#   TRUE if all elements pass validation, FALSE else</span></span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a><span class="co"># error handling: </span></span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a><span class="co">#   none!!</span></span>
+<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a>checkNumVars <span class="ot">&lt;-</span> <span class="cf">function</span>(vars) {</span>
+<span id="cb15-17"><a href="#cb15-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-18"><a href="#cb15-18" aria-hidden="true" tabindex="-1"></a>  <span class="co">#init validation. If it remains TRUE, validation successful.</span></span>
+<span id="cb15-19"><a href="#cb15-19" aria-hidden="true" tabindex="-1"></a>  validation <span class="ot">&lt;-</span> <span class="cn">TRUE</span></span>
+<span id="cb15-20"><a href="#cb15-20" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb15-21"><a href="#cb15-21" aria-hidden="true" tabindex="-1"></a>  <span class="co">#cycle through all values in the vector</span></span>
+<span id="cb15-22"><a href="#cb15-22" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (var_i <span class="cf">in</span> vars) {</span>
+<span id="cb15-23"><a href="#cb15-23" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb15-24"><a href="#cb15-24" aria-hidden="true" tabindex="-1"></a>    <span class="co">#if value of element not in list, toggle validation to FALSE</span></span>
+<span id="cb15-25"><a href="#cb15-25" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="sc">!</span>(var_i <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">'AGEP'</span>,</span>
+<span id="cb15-26"><a href="#cb15-26" aria-hidden="true" tabindex="-1"></a>                       <span class="st">'GASP'</span>,</span>
+<span id="cb15-27"><a href="#cb15-27" aria-hidden="true" tabindex="-1"></a>                       <span class="st">'GRPIP'</span>,</span>
+<span id="cb15-28"><a href="#cb15-28" aria-hidden="true" tabindex="-1"></a>                       <span class="st">'JWAP'</span>,</span>
+<span id="cb15-29"><a href="#cb15-29" aria-hidden="true" tabindex="-1"></a>                       <span class="st">'JWDP'</span>,</span>
+<span id="cb15-30"><a href="#cb15-30" aria-hidden="true" tabindex="-1"></a>                       <span class="st">'JWMNP'</span>,</span>
+<span id="cb15-31"><a href="#cb15-31" aria-hidden="true" tabindex="-1"></a>                       <span class="st">'PWGTP'</span>)))</span>
+<span id="cb15-32"><a href="#cb15-32" aria-hidden="true" tabindex="-1"></a>      validation <span class="ot">&lt;-</span> <span class="cn">FALSE</span></span>
+<span id="cb15-33"><a href="#cb15-33" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb15-34"><a href="#cb15-34" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb15-35"><a href="#cb15-35" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(validation)</span>
+<span id="cb15-36"><a href="#cb15-36" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
-<section id="categorical-vars" class="level3">
-<h3 class="anchored" data-anchor-id="categorical-vars">Categorical vars</h3>
-<ul>
-<li>Default:
-<ul>
-<li>SEX</li>
-</ul></li>
-<li>Valid:
-<ul>
-<li>FER</li>
-<li>HHL</li>
-<li>HISPEED</li>
-<li>JWTRNS</li>
-<li>SCH</li>
-<li>SCHL</li>
-<li>SEX</li>
-</ul></li>
-<li>Conditions:
-<ul>
-<li>Translate variables into factors with appropriate levels as applicable.</li>
-<li>At least one categorical variable must be returned.</li>
-<li>Ensure valid user entries.</li>
-</ul></li>
-<li>Function: checkCatVars()</li>
-</ul>
+<section id="fcn-check-categorical-vars" class="level3">
+<h3 class="anchored" data-anchor-id="fcn-check-categorical-vars">Fcn: Check Cat[egorical] Vars</h3>
+<p>This function takes an argument of a vector of characters representing the set of categorical variables being requested. It validates them and returns <code>TRUE</code> if the entire set is valid.</p>
+<p>Valid arguments: 1+ strings only from the set [SEX,FER,HHL,HISPEED,JWTRNS,SCH,SCHL]</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># function checkCatVars()</span></span>
-<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="co"># purpose: Confirm that categorical variable names passed are within the legitimate set.</span></span>
-<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="co"># arguments: vars (vector of chars)</span></span>
-<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="co"># returns: TRUE for all successful values, FALSE else</span></span>
-<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a><span class="co"># error handling: none; assumes a vector of characters for expected behavior</span></span>
-<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>checkCatVars <span class="ot">&lt;-</span> <span class="cf">function</span>(vars) {</span>
-<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>  <span class="co">#init pass. If it remains TRUE, return will be TRUE (passes check)</span></span>
-<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>  pass <span class="ot">=</span> <span class="cn">TRUE</span></span>
-<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>  <span class="co">#cycle through all values in the vector</span></span>
-<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (var_i <span class="cf">in</span> vars) {</span>
-<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>    <span class="co">#if value of element not in list, toggle pass to FALSE</span></span>
-<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="sc">!</span>(var_i <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">'SEX'</span>,</span>
-<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a>                       <span class="st">'FER'</span>,</span>
-<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a>                       <span class="st">'HHL'</span>,</span>
-<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a>                       <span class="st">'HISPEED'</span>,</span>
-<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a>                       <span class="st">'JWTRNS'</span>,</span>
-<span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a>                       <span class="st">'SCH'</span>,</span>
-<span id="cb18-21"><a href="#cb18-21" aria-hidden="true" tabindex="-1"></a>                       <span class="st">'SCHL'</span>)))</span>
-<span id="cb18-22"><a href="#cb18-22" aria-hidden="true" tabindex="-1"></a>      pass <span class="ot">=</span> <span class="cn">FALSE</span></span>
-<span id="cb18-23"><a href="#cb18-23" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb18-24"><a href="#cb18-24" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb18-25"><a href="#cb18-25" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(pass)</span>
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># function:</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="co">#   checkCatVars(vars)</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a><span class="co"># purpose:</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a><span class="co">#   Confirm that categorical variable names passed are within the legitimate set.</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a><span class="co"># arguments: </span></span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a><span class="co">#   vars - vector of chars</span></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a><span class="co"># returns: </span></span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a><span class="co">#   TRUE if all elements pass validation, FALSE else</span></span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a><span class="co"># error handling: </span></span>
+<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a><span class="co">#   none!!</span></span>
+<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a>checkCatVars <span class="ot">&lt;-</span> <span class="cf">function</span>(vars) {</span>
+<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-18"><a href="#cb16-18" aria-hidden="true" tabindex="-1"></a>  <span class="co">#init validation. If it remains TRUE, validation successful.</span></span>
+<span id="cb16-19"><a href="#cb16-19" aria-hidden="true" tabindex="-1"></a>  validation <span class="ot">&lt;-</span> <span class="cn">TRUE</span></span>
+<span id="cb16-20"><a href="#cb16-20" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb16-21"><a href="#cb16-21" aria-hidden="true" tabindex="-1"></a>  <span class="co">#cycle through all values in the vector</span></span>
+<span id="cb16-22"><a href="#cb16-22" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (var_i <span class="cf">in</span> vars) {</span>
+<span id="cb16-23"><a href="#cb16-23" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb16-24"><a href="#cb16-24" aria-hidden="true" tabindex="-1"></a>    <span class="co">#if value of element not in list, toggle validation to FALSE</span></span>
+<span id="cb16-25"><a href="#cb16-25" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="sc">!</span>(var_i <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">'SEX'</span>,</span>
+<span id="cb16-26"><a href="#cb16-26" aria-hidden="true" tabindex="-1"></a>                       <span class="st">'FER'</span>,</span>
+<span id="cb16-27"><a href="#cb16-27" aria-hidden="true" tabindex="-1"></a>                       <span class="st">'HHL'</span>,</span>
+<span id="cb16-28"><a href="#cb16-28" aria-hidden="true" tabindex="-1"></a>                       <span class="st">'HISPEED'</span>,</span>
+<span id="cb16-29"><a href="#cb16-29" aria-hidden="true" tabindex="-1"></a>                       <span class="st">'JWTRNS'</span>,</span>
+<span id="cb16-30"><a href="#cb16-30" aria-hidden="true" tabindex="-1"></a>                       <span class="st">'SCH'</span>,</span>
+<span id="cb16-31"><a href="#cb16-31" aria-hidden="true" tabindex="-1"></a>                       <span class="st">'SCHL'</span>)))</span>
+<span id="cb16-32"><a href="#cb16-32" aria-hidden="true" tabindex="-1"></a>      validation <span class="ot">&lt;-</span> <span class="cn">FALSE</span></span>
+<span id="cb16-33"><a href="#cb16-33" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb16-34"><a href="#cb16-34" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb16-35"><a href="#cb16-35" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(validation)</span>
+<span id="cb16-36"><a href="#cb16-36" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="fcn-check-geography-level" class="level3">
+<h3 class="anchored" data-anchor-id="fcn-check-geography-level">Fcn: Check Geo[graphy Level]</h3>
+<p>This function takes an argument of a character string representing the geography level for subsetting. It validates the requested type is within the accepted list, returning <code>TRUE</code> if so.</p>
+<p>Valid arguments: A string from the set [All,Region,Division,State]</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># function:</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="co">#   checkGeo(geoLevel)</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="co"># purpose:</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a><span class="co">#   Confirm that geography level is a single string within legitimate set.</span></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a><span class="co"># arguments: </span></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a><span class="co">#   geoLevel - string</span></span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a><span class="co"># returns: </span></span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a><span class="co">#   TRUE if element passes validation, FALSE else</span></span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a><span class="co"># error handling: </span></span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a><span class="co">#   FALSE if vector length is beyond 1 string</span></span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a>checkGeo <span class="ot">&lt;-</span> <span class="cf">function</span>(geoLevel) {</span>
+<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb17-18"><a href="#cb17-18" aria-hidden="true" tabindex="-1"></a>  <span class="co">#set FALSE if longer than 1 or out of bounds</span></span>
+<span id="cb17-19"><a href="#cb17-19" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">length</span>(geoLevel) <span class="sc">!=</span> <span class="dv">1</span>) </span>
+<span id="cb17-20"><a href="#cb17-20" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb17-21"><a href="#cb17-21" aria-hidden="true" tabindex="-1"></a>    validation <span class="ot">=</span> <span class="cn">FALSE</span></span>
+<span id="cb17-22"><a href="#cb17-22" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb17-23"><a href="#cb17-23" aria-hidden="true" tabindex="-1"></a>  <span class="cf">else</span> <span class="cf">if</span> (geoLevel <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">'All'</span>,</span>
+<span id="cb17-24"><a href="#cb17-24" aria-hidden="true" tabindex="-1"></a>                           <span class="st">'Region'</span>,</span>
+<span id="cb17-25"><a href="#cb17-25" aria-hidden="true" tabindex="-1"></a>                           <span class="st">'Division'</span>,</span>
+<span id="cb17-26"><a href="#cb17-26" aria-hidden="true" tabindex="-1"></a>                           <span class="st">'State'</span>))</span>
+<span id="cb17-27"><a href="#cb17-27" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb17-28"><a href="#cb17-28" aria-hidden="true" tabindex="-1"></a>    validation <span class="ot">=</span> <span class="cn">TRUE</span></span>
+<span id="cb17-29"><a href="#cb17-29" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb17-30"><a href="#cb17-30" aria-hidden="true" tabindex="-1"></a>  <span class="cf">else</span></span>
+<span id="cb17-31"><a href="#cb17-31" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb17-32"><a href="#cb17-32" aria-hidden="true" tabindex="-1"></a>    validation <span class="ot">=</span> <span class="cn">FALSE</span></span>
+<span id="cb17-33"><a href="#cb17-33" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb17-34"><a href="#cb17-34" aria-hidden="true" tabindex="-1"></a>  <span class="co">#TRUE if valid</span></span>
+<span id="cb17-35"><a href="#cb17-35" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(validation)</span>
+<span id="cb17-36"><a href="#cb17-36" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+</section>
+<section id="main-functions" class="level2">
+<h2 class="anchored" data-anchor-id="main-functions">Main Functions</h2>
+<section id="fcn-from-get-to-tibble" class="level3">
+<h3 class="anchored" data-anchor-id="fcn-from-get-to-tibble">Fcn: [From] GET to Tibble</h3>
+<p>Now, let’s develop the helper function to process results from <code>GET()</code> into a useful <code>tibble</code>.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># function:</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="co">#   getToTibble(get_results)</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="co"># purpose:</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a><span class="co">#   Take results from a Census GET call, which come back with raw JSON, and transform them into a usable tibble that shows only the retrieved content in a friendly format.</span></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a><span class="co"># arguments: </span></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a><span class="co">#   get_results - the result of a prior call to GET() on the Census API</span></span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a><span class="co"># returns: </span></span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a><span class="co">#   tibble corresponding to the parsed, json, raw to char 'content' element of the original GET result</span></span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a><span class="co"># error handling: </span></span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a><span class="co">#   none!!</span></span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a>getToTibble <span class="ot">&lt;-</span> <span class="cf">function</span>(get_results) {</span>
+<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a>  <span class="co">#pull content JSON branch and convert to char</span></span>
+<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a>  parsed_results <span class="ot">&lt;-</span> <span class="fu">fromJSON</span>(<span class="fu">rawToChar</span>(get_results<span class="sc">$</span>content))</span>
+<span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb18-21"><a href="#cb18-21" aria-hidden="true" tabindex="-1"></a>  <span class="co">#convert to tibble</span></span>
+<span id="cb18-22"><a href="#cb18-22" aria-hidden="true" tabindex="-1"></a>  tibble_results <span class="ot">=</span> <span class="fu">as_tibble</span>(parsed_results)  </span>
+<span id="cb18-23"><a href="#cb18-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-24"><a href="#cb18-24" aria-hidden="true" tabindex="-1"></a>  <span class="co">#return tibble</span></span>
+<span id="cb18-25"><a href="#cb18-25" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(tibble_results)</span>
 <span id="cb18-26"><a href="#cb18-26" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-</section>
-<section id="geography-level" class="level3">
-<h3 class="anchored" data-anchor-id="geography-level">Geography level</h3>
-<ul>
-<li>Default:
-<ul>
-<li>All</li>
-</ul></li>
-<li>Valid:
-<ul>
-<li>All</li>
-<li>Region</li>
-<li>Division</li>
-<li>State</li>
-</ul></li>
-<li>Conditions:
-<ul>
-<li>Ensure valid user entries.</li>
-</ul></li>
-<li>Function: checkGeo()</li>
-</ul>
+<p>Let’s confirm that our function produces the same result as our earlier manual API call.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co"># function checkGeo()</span></span>
-<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="co"># purpose: Confirm that geo selections passed are within the legitimate set.</span></span>
-<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a><span class="co"># arguments: geo (char string)</span></span>
-<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a><span class="co"># returns: TRUE for all successful values, FALSE else (includes error)</span></span>
-<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a><span class="co"># error handling: none; geo must be length 1</span></span>
-<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>checkGeo <span class="ot">&lt;-</span> <span class="cf">function</span>(geo) {</span>
-<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>  <span class="co">#set FALSE if longer than 1 or out of bounds</span></span>
-<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">length</span>(geo) <span class="sc">!=</span> <span class="dv">1</span>) pass <span class="ot">=</span> <span class="cn">FALSE</span></span>
-<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>  <span class="cf">else</span> <span class="cf">if</span> (geo <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">'All'</span>,</span>
-<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>                      <span class="st">'Region'</span>,</span>
-<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>                      <span class="st">'Division'</span>,</span>
-<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>                      <span class="st">'State'</span>))</span>
-<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a>    pass <span class="ot">=</span> <span class="cn">TRUE</span></span>
-<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a>  <span class="cf">else</span></span>
-<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a>    pass <span class="ot">=</span> <span class="cn">FALSE</span></span>
-<span id="cb19-17"><a href="#cb19-17" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb19-18"><a href="#cb19-18" aria-hidden="true" tabindex="-1"></a>  <span class="co">#TRUE if valid</span></span>
-<span id="cb19-19"><a href="#cb19-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(pass)</span>
-<span id="cb19-20"><a href="#cb19-20" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb19-21"><a href="#cb19-21" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-</section>
-<section id="query-function" class="level3">
-<h3 class="anchored" data-anchor-id="query-function">Query Function</h3>
-<p>This function will build and get the URL with the appropriate elements built into the query string. It will ensure valid arguments first, then build the call, then send it and return the result of the GET command.</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co"># function queryCensus()</span></span>
-<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="co"># purpose: Build and call census API.</span></span>
-<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a><span class="co"># arguments:</span></span>
-<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a><span class="co">#     yr: year to query</span></span>
-<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a><span class="co">#     numVars: vector of chars, 1 or more</span></span>
-<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a><span class="co">#     catVars: vector of chars, 1 or more</span></span>
-<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a><span class="co">#     geoLevel: one string matching permitted values</span></span>
-<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a><span class="co">#     geoSubset: vector of chars, 1 or more, for subset by geoLevel (no restrictions)</span></span>
-<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a><span class="co"># returns: either NA (if invalid) or result of the GET call</span></span>
-<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a><span class="co"># error handling: error if any parameters are invalid</span></span>
-<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a>queryCensus <span class="ot">&lt;-</span> <span class="cf">function</span>(<span class="at">yr =</span> <span class="dv">2022</span>,</span>
-<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a>                        <span class="at">numVars =</span> <span class="fu">c</span>(<span class="st">'AGEP'</span>,<span class="st">'PWGTP'</span>),</span>
-<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a>                        <span class="at">catVars =</span> <span class="st">'SEX'</span>,</span>
-<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a>                        <span class="at">geoLevel =</span> <span class="st">'All'</span>,</span>
-<span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a>                        <span class="at">geoSubset =</span> <span class="dv">17</span> ) { </span>
-<span id="cb20-16"><a href="#cb20-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb20-17"><a href="#cb20-17" aria-hidden="true" tabindex="-1"></a>  <span class="co">#validate arguments</span></span>
-<span id="cb20-18"><a href="#cb20-18" aria-hidden="true" tabindex="-1"></a>  status <span class="ot">&lt;-</span> <span class="fu">checkYear</span>(yr) <span class="sc">&amp;</span></span>
-<span id="cb20-19"><a href="#cb20-19" aria-hidden="true" tabindex="-1"></a>            <span class="fu">checkNumVars</span>(numVars) <span class="sc">&amp;</span></span>
-<span id="cb20-20"><a href="#cb20-20" aria-hidden="true" tabindex="-1"></a>            <span class="fu">checkCatVars</span>(catVars) <span class="sc">&amp;</span></span>
-<span id="cb20-21"><a href="#cb20-21" aria-hidden="true" tabindex="-1"></a>            <span class="fu">checkGeo</span>(geoLevel)</span>
-<span id="cb20-22"><a href="#cb20-22" aria-hidden="true" tabindex="-1"></a>  <span class="co">#if any of these failed, status is now FALSE</span></span>
-<span id="cb20-23"><a href="#cb20-23" aria-hidden="true" tabindex="-1"></a>  <span class="co">#if so, exit with NA</span></span>
-<span id="cb20-24"><a href="#cb20-24" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span>status) <span class="fu">return</span>(<span class="cn">NA</span>)</span>
-<span id="cb20-25"><a href="#cb20-25" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb20-26"><a href="#cb20-26" aria-hidden="true" tabindex="-1"></a>  <span class="co">#otherwise, proceed and combine strings appropriately for query parameters</span></span>
-<span id="cb20-27"><a href="#cb20-27" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb20-28"><a href="#cb20-28" aria-hidden="true" tabindex="-1"></a>  <span class="co">#combine numeric and categorical vars for the get parameter</span></span>
-<span id="cb20-29"><a href="#cb20-29" aria-hidden="true" tabindex="-1"></a>  get_param <span class="ot">&lt;-</span> <span class="fu">paste</span>(<span class="fu">paste</span>(numVars,<span class="at">sep =</span> <span class="st">','</span>,<span class="at">collapse =</span> <span class="st">','</span>),</span>
-<span id="cb20-30"><a href="#cb20-30" aria-hidden="true" tabindex="-1"></a>                     <span class="st">','</span>,</span>
-<span id="cb20-31"><a href="#cb20-31" aria-hidden="true" tabindex="-1"></a>                     <span class="fu">paste</span>(catVars,<span class="at">sep =</span> <span class="st">','</span>,<span class="at">collapse =</span> <span class="st">','</span>),</span>
-<span id="cb20-32"><a href="#cb20-32" aria-hidden="true" tabindex="-1"></a>                     <span class="at">sep =</span> <span class="st">''</span>,</span>
-<span id="cb20-33"><a href="#cb20-33" aria-hidden="true" tabindex="-1"></a>                     <span class="at">collapse =</span> <span class="st">''</span></span>
-<span id="cb20-34"><a href="#cb20-34" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb20-35"><a href="#cb20-35" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb20-36"><a href="#cb20-36" aria-hidden="true" tabindex="-1"></a>  <span class="co">#since geo level passed validation, only need to switch 'All' for 'State' if applicable</span></span>
-<span id="cb20-37"><a href="#cb20-37" aria-hidden="true" tabindex="-1"></a>  geoLevelCode <span class="ot">&lt;-</span> <span class="cf">if</span>(geoLevel <span class="sc">==</span> <span class="st">'All'</span>) <span class="st">'State'</span> <span class="cf">else</span> geoLevel</span>
-<span id="cb20-38"><a href="#cb20-38" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb20-39"><a href="#cb20-39" aria-hidden="true" tabindex="-1"></a>  <span class="co">#prepare subset strings</span></span>
-<span id="cb20-40"><a href="#cb20-40" aria-hidden="true" tabindex="-1"></a>  subset_param <span class="ot">&lt;-</span> <span class="fu">paste</span>(<span class="fu">paste</span>(geoSubset,<span class="at">sep =</span> <span class="st">','</span>,<span class="at">collapse =</span> <span class="st">','</span>),</span>
-<span id="cb20-41"><a href="#cb20-41" aria-hidden="true" tabindex="-1"></a>                        <span class="at">sep =</span> <span class="st">''</span>,</span>
-<span id="cb20-42"><a href="#cb20-42" aria-hidden="true" tabindex="-1"></a>                        <span class="at">collapse =</span> <span class="st">''</span></span>
-<span id="cb20-43"><a href="#cb20-43" aria-hidden="true" tabindex="-1"></a>                        )</span>
-<span id="cb20-44"><a href="#cb20-44" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb20-45"><a href="#cb20-45" aria-hidden="true" tabindex="-1"></a>  <span class="do">###############</span></span>
-<span id="cb20-46"><a href="#cb20-46" aria-hidden="true" tabindex="-1"></a>  <span class="co">#this is how to do the state stuff</span></span>
-<span id="cb20-47"><a href="#cb20-47" aria-hidden="true" tabindex="-1"></a>  <span class="co">#can remove all the 'ST' garbage above</span></span>
-<span id="cb20-48"><a href="#cb20-48" aria-hidden="true" tabindex="-1"></a>  <span class="co">#https://api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR,ST&amp;SCHL=24&amp;for=state:13,14,15,16,17&amp;SCHL=24</span></span>
-<span id="cb20-49"><a href="#cb20-49" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb20-50"><a href="#cb20-50" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb20-51"><a href="#cb20-51" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb20-52"><a href="#cb20-52" aria-hidden="true" tabindex="-1"></a>  <span class="co">#base URL for example: api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR&amp;SCHL=24&amp;key=YOUR_KEY</span></span>
-<span id="cb20-53"><a href="#cb20-53" aria-hidden="true" tabindex="-1"></a>  <span class="co">#build and call API</span></span>
-<span id="cb20-54"><a href="#cb20-54" aria-hidden="true" tabindex="-1"></a>  base_URL1 <span class="ot">&lt;-</span> <span class="st">"https://api.census.gov/data/"</span></span>
-<span id="cb20-55"><a href="#cb20-55" aria-hidden="true" tabindex="-1"></a>  base_URL2 <span class="ot">&lt;-</span> <span class="st">"/acs/acs1/pums?"</span></span>
-<span id="cb20-56"><a href="#cb20-56" aria-hidden="true" tabindex="-1"></a>  query_URL <span class="ot">&lt;-</span> <span class="fu">paste</span>(base_URL1,</span>
-<span id="cb20-57"><a href="#cb20-57" aria-hidden="true" tabindex="-1"></a>                     yr,</span>
-<span id="cb20-58"><a href="#cb20-58" aria-hidden="true" tabindex="-1"></a>                     base_URL2,</span>
-<span id="cb20-59"><a href="#cb20-59" aria-hidden="true" tabindex="-1"></a>                     <span class="st">'get='</span>,</span>
-<span id="cb20-60"><a href="#cb20-60" aria-hidden="true" tabindex="-1"></a>                     get_param,</span>
-<span id="cb20-61"><a href="#cb20-61" aria-hidden="true" tabindex="-1"></a>                     <span class="st">'&amp;for='</span>,</span>
-<span id="cb20-62"><a href="#cb20-62" aria-hidden="true" tabindex="-1"></a>                     geoLevelCode,</span>
-<span id="cb20-63"><a href="#cb20-63" aria-hidden="true" tabindex="-1"></a>                     <span class="st">':'</span>,</span>
-<span id="cb20-64"><a href="#cb20-64" aria-hidden="true" tabindex="-1"></a>                     subset_param,</span>
-<span id="cb20-65"><a href="#cb20-65" aria-hidden="true" tabindex="-1"></a>                     <span class="at">sep =</span> <span class="st">''</span>,</span>
-<span id="cb20-66"><a href="#cb20-66" aria-hidden="true" tabindex="-1"></a>                     <span class="at">collapse =</span> <span class="st">''</span>)</span>
-<span id="cb20-67"><a href="#cb20-67" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb20-68"><a href="#cb20-68" aria-hidden="true" tabindex="-1"></a>  <span class="co">#print(query_URL)</span></span>
-<span id="cb20-69"><a href="#cb20-69" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb20-70"><a href="#cb20-70" aria-hidden="true" tabindex="-1"></a>  query_results <span class="ot">&lt;-</span> <span class="fu">GET</span>(query_URL)</span>
-<span id="cb20-71"><a href="#cb20-71" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(query_results)</span>
-<span id="cb20-72"><a href="#cb20-72" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-</section>
-<section id="field-formatting-function" class="level3">
-<h3 class="anchored" data-anchor-id="field-formatting-function">Field formatting function</h3>
-<p>Here, we need to adjust numeric fields from char to num/time, and replace enumerated categorical field values with representative labels in our tibble. For instance, ‘HISPEED’ has three values 0,1,2 which correspond to N/A, Yes, No.&nbsp;We need to transform columns like this, accordingly.</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co"># function formatResults()</span></span>
-<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="co"># purpose: Mutate columns of our tibble to appropriate type and adjust the column names and cut the header row.</span></span>
-<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a><span class="co"># arguments: tibble of Census results, desired year for data dictionary formatting (2022 default)</span></span>
-<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a><span class="co"># returns: adjusted tibble</span></span>
-<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a><span class="co"># error handling: none, only call when appropraite</span></span>
-<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>formatResults <span class="ot">&lt;-</span> <span class="cf">function</span>(results,<span class="at">year=</span><span class="dv">2022</span>) {</span>
-<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>  <span class="co">#update the column names</span></span>
-<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">names</span>(results) <span class="ot">&lt;-</span> results[<span class="dv">1</span>,]</span>
-<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>  <span class="co">#remove first row</span></span>
-<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a>  results <span class="ot">&lt;-</span> results[<span class="sc">-</span><span class="dv">1</span>,]</span>
-<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a>  <span class="co">#vector of all possible GET variables that may require revision</span></span>
-<span id="cb21-15"><a href="#cb21-15" aria-hidden="true" tabindex="-1"></a>  all_variables <span class="ot">=</span> <span class="fu">c</span>(<span class="st">'AGEP'</span>, <span class="co">#NUMERICS</span></span>
-<span id="cb21-16"><a href="#cb21-16" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'PWGTP'</span>,</span>
-<span id="cb21-17"><a href="#cb21-17" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'GASP'</span>,</span>
-<span id="cb21-18"><a href="#cb21-18" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'GRPIP'</span>,</span>
-<span id="cb21-19"><a href="#cb21-19" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'JWMNP'</span>,</span>
-<span id="cb21-20"><a href="#cb21-20" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'JWAP'</span>, <span class="co">#TIME</span></span>
-<span id="cb21-21"><a href="#cb21-21" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'JWDP'</span>,</span>
-<span id="cb21-22"><a href="#cb21-22" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'SEX'</span>, <span class="co">#CATEGORICAL</span></span>
-<span id="cb21-23"><a href="#cb21-23" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'FER'</span>,</span>
-<span id="cb21-24"><a href="#cb21-24" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'HHL'</span>,</span>
-<span id="cb21-25"><a href="#cb21-25" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'HISPEED'</span>,</span>
-<span id="cb21-26"><a href="#cb21-26" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'JWTRNS'</span>,</span>
-<span id="cb21-27"><a href="#cb21-27" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'SCH'</span>,</span>
-<span id="cb21-28"><a href="#cb21-28" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'SCHL'</span>,</span>
-<span id="cb21-29"><a href="#cb21-29" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'REGION'</span>,</span>
-<span id="cb21-30"><a href="#cb21-30" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'DIVISION'</span>,</span>
-<span id="cb21-31"><a href="#cb21-31" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'STATE'</span>)</span>
-<span id="cb21-32"><a href="#cb21-32" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb21-33"><a href="#cb21-33" aria-hidden="true" tabindex="-1"></a>  <span class="co">#vector of all possible variables by types</span></span>
-<span id="cb21-34"><a href="#cb21-34" aria-hidden="true" tabindex="-1"></a>  numeric_variables <span class="ot">=</span> <span class="fu">c</span>(<span class="st">'AGEP'</span>,</span>
-<span id="cb21-35"><a href="#cb21-35" aria-hidden="true" tabindex="-1"></a>                        <span class="st">'PWGTP'</span>,</span>
-<span id="cb21-36"><a href="#cb21-36" aria-hidden="true" tabindex="-1"></a>                        <span class="st">'GASP'</span>,</span>
-<span id="cb21-37"><a href="#cb21-37" aria-hidden="true" tabindex="-1"></a>                        <span class="st">'GRPIP'</span>,</span>
-<span id="cb21-38"><a href="#cb21-38" aria-hidden="true" tabindex="-1"></a>                        <span class="st">'JWMNP'</span>)</span>
-<span id="cb21-39"><a href="#cb21-39" aria-hidden="true" tabindex="-1"></a>  time_variables <span class="ot">=</span> <span class="fu">c</span>(<span class="st">'JWAP'</span>,</span>
-<span id="cb21-40"><a href="#cb21-40" aria-hidden="true" tabindex="-1"></a>                     <span class="st">'JWDP'</span>)</span>
-<span id="cb21-41"><a href="#cb21-41" aria-hidden="true" tabindex="-1"></a>  cat_variables <span class="ot">=</span> <span class="fu">c</span>(<span class="st">'SEX'</span>,</span>
-<span id="cb21-42"><a href="#cb21-42" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'FER'</span>,</span>
-<span id="cb21-43"><a href="#cb21-43" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'HHL'</span>,</span>
-<span id="cb21-44"><a href="#cb21-44" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'HISPEED'</span>,</span>
-<span id="cb21-45"><a href="#cb21-45" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'JWTRNS'</span>,</span>
-<span id="cb21-46"><a href="#cb21-46" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'SCH'</span>,</span>
-<span id="cb21-47"><a href="#cb21-47" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'SCHL'</span>,</span>
-<span id="cb21-48"><a href="#cb21-48" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'REGION'</span>,</span>
-<span id="cb21-49"><a href="#cb21-49" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'DIVISION'</span>,</span>
-<span id="cb21-50"><a href="#cb21-50" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'STATE'</span>)</span>
-<span id="cb21-51"><a href="#cb21-51" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb21-52"><a href="#cb21-52" aria-hidden="true" tabindex="-1"></a>  <span class="co">#loop through all possible vars requiring update</span></span>
-<span id="cb21-53"><a href="#cb21-53" aria-hidden="true" tabindex="-1"></a>  <span class="co">#if it exists in our tibble as a column, mutate the column type appropriately</span></span>
-<span id="cb21-54"><a href="#cb21-54" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (varName <span class="cf">in</span> all_variables) {</span>
-<span id="cb21-55"><a href="#cb21-55" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb21-56"><a href="#cb21-56" aria-hidden="true" tabindex="-1"></a>    <span class="co">#loop through all columns in tibble</span></span>
-<span id="cb21-57"><a href="#cb21-57" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> (colName <span class="cf">in</span> <span class="fu">names</span>(results)) {</span>
-<span id="cb21-58"><a href="#cb21-58" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb21-59"><a href="#cb21-59" aria-hidden="true" tabindex="-1"></a>      <span class="co">#if a match </span></span>
-<span id="cb21-60"><a href="#cb21-60" aria-hidden="true" tabindex="-1"></a>      <span class="cf">if</span> (varName <span class="sc">==</span> colName) {</span>
-<span id="cb21-61"><a href="#cb21-61" aria-hidden="true" tabindex="-1"></a>        </span>
-<span id="cb21-62"><a href="#cb21-62" aria-hidden="true" tabindex="-1"></a>        <span class="co">#for a numeric type, swap its contents to numeric</span></span>
-<span id="cb21-63"><a href="#cb21-63" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (varName <span class="sc">%in%</span> numeric_variables) {</span>
-<span id="cb21-64"><a href="#cb21-64" aria-hidden="true" tabindex="-1"></a>          results[varName] <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(results[[varName]])</span>
-<span id="cb21-65"><a href="#cb21-65" aria-hidden="true" tabindex="-1"></a>        }</span>
-<span id="cb21-66"><a href="#cb21-66" aria-hidden="true" tabindex="-1"></a>        </span>
-<span id="cb21-67"><a href="#cb21-67" aria-hidden="true" tabindex="-1"></a>        <span class="co">#for a time type, swap its contents to numeric</span></span>
-<span id="cb21-68"><a href="#cb21-68" aria-hidden="true" tabindex="-1"></a>     <span class="co">#   if (varName %in% time_variables) {</span></span>
-<span id="cb21-69"><a href="#cb21-69" aria-hidden="true" tabindex="-1"></a>      <span class="co">#    results |&gt; mutate(varName = as.numeric(results[varName]))</span></span>
-<span id="cb21-70"><a href="#cb21-70" aria-hidden="true" tabindex="-1"></a>         </span>
-<span id="cb21-71"><a href="#cb21-71" aria-hidden="true" tabindex="-1"></a>          <span class="co">#revise values </span></span>
-<span id="cb21-72"><a href="#cb21-72" aria-hidden="true" tabindex="-1"></a><span class="co">#        }</span></span>
-<span id="cb21-73"><a href="#cb21-73" aria-hidden="true" tabindex="-1"></a>        </span>
-<span id="cb21-74"><a href="#cb21-74" aria-hidden="true" tabindex="-1"></a>        <span class="co">#for a categ type, swap its contents from index to label </span></span>
-<span id="cb21-75"><a href="#cb21-75" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (varName <span class="sc">%in%</span> cat_variables) {</span>
-<span id="cb21-76"><a href="#cb21-76" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb21-77"><a href="#cb21-77" aria-hidden="true" tabindex="-1"></a>          <span class="co">#make a temp join but only keep the replaced char labels in the result column</span></span>
-<span id="cb21-78"><a href="#cb21-78" aria-hidden="true" tabindex="-1"></a>          lookup <span class="ot">&lt;-</span> <span class="fu">getLookup</span>(varName,year)</span>
-<span id="cb21-79"><a href="#cb21-79" aria-hidden="true" tabindex="-1"></a>          temp <span class="ot">&lt;-</span> results[varName]</span>
-<span id="cb21-80"><a href="#cb21-80" aria-hidden="true" tabindex="-1"></a>          <span class="fu">names</span>(temp)<span class="ot">=</span><span class="st">'name'</span></span>
-<span id="cb21-81"><a href="#cb21-81" aria-hidden="true" tabindex="-1"></a>          temp_join <span class="ot">&lt;-</span> <span class="fu">left_join</span>(temp,lookup,<span class="at">by=</span><span class="fu">join_by</span>(name <span class="sc">==</span> name))</span>
-<span id="cb21-82"><a href="#cb21-82" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb21-83"><a href="#cb21-83" aria-hidden="true" tabindex="-1"></a>          <span class="co">#revise values </span></span>
-<span id="cb21-84"><a href="#cb21-84" aria-hidden="true" tabindex="-1"></a>          results[varName] <span class="ot">&lt;-</span> temp_join<span class="sc">$</span>value</span>
-<span id="cb21-85"><a href="#cb21-85" aria-hidden="true" tabindex="-1"></a>        }</span>
-<span id="cb21-86"><a href="#cb21-86" aria-hidden="true" tabindex="-1"></a>                                      </span>
-<span id="cb21-87"><a href="#cb21-87" aria-hidden="true" tabindex="-1"></a>                              </span>
-<span id="cb21-88"><a href="#cb21-88" aria-hidden="true" tabindex="-1"></a>                              </span>
-<span id="cb21-89"><a href="#cb21-89" aria-hidden="true" tabindex="-1"></a>      }</span>
-<span id="cb21-90"><a href="#cb21-90" aria-hidden="true" tabindex="-1"></a>      </span>
-<span id="cb21-91"><a href="#cb21-91" aria-hidden="true" tabindex="-1"></a>      </span>
-<span id="cb21-92"><a href="#cb21-92" aria-hidden="true" tabindex="-1"></a>      <span class="co">#will need to consider NUMERIC, CATEGORICAL, and GEO</span></span>
-<span id="cb21-93"><a href="#cb21-93" aria-hidden="true" tabindex="-1"></a>    }</span>
-<span id="cb21-94"><a href="#cb21-94" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb21-95"><a href="#cb21-95" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb21-96"><a href="#cb21-96" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb21-97"><a href="#cb21-97" aria-hidden="true" tabindex="-1"></a>  <span class="co">#special handling for geo lookup, because in function call previously it doesn't like it </span></span>
-<span id="cb21-98"><a href="#cb21-98" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb21-99"><a href="#cb21-99" aria-hidden="true" tabindex="-1"></a>  <span class="co">#make a temp join but only keep the replaced char labels in the result column</span></span>
-<span id="cb21-100"><a href="#cb21-100" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="st">"region"</span> <span class="sc">%in%</span> <span class="fu">names</span>(results)) {</span>
-<span id="cb21-101"><a href="#cb21-101" aria-hidden="true" tabindex="-1"></a>    geoLevel <span class="ot">&lt;-</span> <span class="st">"region"</span></span>
-<span id="cb21-102"><a href="#cb21-102" aria-hidden="true" tabindex="-1"></a>    geoLevel_query <span class="ot">&lt;-</span> <span class="st">"REGION"</span></span>
-<span id="cb21-103"><a href="#cb21-103" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb21-104"><a href="#cb21-104" aria-hidden="true" tabindex="-1"></a>  <span class="cf">else</span> <span class="cf">if</span>(<span class="st">"division"</span> <span class="sc">%in%</span> <span class="fu">names</span>(results)) {</span>
-<span id="cb21-105"><a href="#cb21-105" aria-hidden="true" tabindex="-1"></a>    geoLevel <span class="ot">&lt;-</span> <span class="st">"division"</span></span>
-<span id="cb21-106"><a href="#cb21-106" aria-hidden="true" tabindex="-1"></a>    geoLevel_query <span class="ot">&lt;-</span> <span class="st">"DIVISION"</span></span>
-<span id="cb21-107"><a href="#cb21-107" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb21-108"><a href="#cb21-108" aria-hidden="true" tabindex="-1"></a>  <span class="cf">else</span> {</span>
-<span id="cb21-109"><a href="#cb21-109" aria-hidden="true" tabindex="-1"></a>    geoLevel <span class="ot">&lt;-</span> <span class="st">"state"</span></span>
-<span id="cb21-110"><a href="#cb21-110" aria-hidden="true" tabindex="-1"></a>    geoLevel_query <span class="ot">&lt;-</span> <span class="st">"ST"</span></span>
-<span id="cb21-111"><a href="#cb21-111" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb21-112"><a href="#cb21-112" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb21-113"><a href="#cb21-113" aria-hidden="true" tabindex="-1"></a>  lookup <span class="ot">&lt;-</span> <span class="fu">getLookup</span>(geoLevel_query,year)</span>
-<span id="cb21-114"><a href="#cb21-114" aria-hidden="true" tabindex="-1"></a>  temp <span class="ot">&lt;-</span> results[geoLevel]</span>
-<span id="cb21-115"><a href="#cb21-115" aria-hidden="true" tabindex="-1"></a>  <span class="fu">names</span>(temp)<span class="ot">=</span><span class="st">'name'</span></span>
-<span id="cb21-116"><a href="#cb21-116" aria-hidden="true" tabindex="-1"></a>  temp_join <span class="ot">&lt;-</span> <span class="fu">left_join</span>(temp,lookup,<span class="at">by=</span><span class="fu">join_by</span>(name <span class="sc">==</span> name))</span>
-<span id="cb21-117"><a href="#cb21-117" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb21-118"><a href="#cb21-118" aria-hidden="true" tabindex="-1"></a>  <span class="co">#revise values </span></span>
-<span id="cb21-119"><a href="#cb21-119" aria-hidden="true" tabindex="-1"></a>  results[geoLevel] <span class="ot">&lt;-</span> temp_join<span class="sc">$</span>value</span>
-<span id="cb21-120"><a href="#cb21-120" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb21-121"><a href="#cb21-121" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb21-122"><a href="#cb21-122" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(results)</span>
-<span id="cb21-123"><a href="#cb21-123" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<section id="section" class="level16">
-<p class="heading"></p>
-<p>DO MORE STUFF HERE ################ agep - Age “00”: “Under 1 year” }, “range”: [ { “min”: “1”, “max”: “99”, “description”: “1 to 99 years (Top-coded***)” pwgtp - PUMS person weight “min”: “1”, “max”: “9999”, “description”: “Continuous values of PWGTP” gasp - Gas cost (monthly cost, use ADJHSG to adjust GASP to constant dollars) “3”: “N/A (GQ/vacant/included in rent or in condo fee/included in electricity payment/no charge or gas not used)” }, “range”: [ { “min”: “4”, “max”: “9999”, “description”: “$4 to $9999 (Rounded and top-coded)” grpip - Gross rent as a percentage of household income past 12 months “0”: “N/A (GQ/vacant/owned or being bought/occupied without rent payment/no household income)”, “101”: “101 percent or more” }, “range”: [ { “min”: “1”, “max”: “100”, “description”: “1 percent to 100 percent” jwap - Time of arrival at work - hour and minute “258”: “9:40 p.m. to 9:44 p.m.”, “260”: “9:50 p.m. to 9:54 p.m.”, “261”: “9:55 p.m. to 9:59 p.m.”, “274”: “11:00 p.m. to 11:04 p.m.”, “048”: “4:10 a.m. to 4:14 a.m.”, “058”: “5:00 a.m. to 5:04 a.m.”, “076”: “6:30 a.m. to 6:34 a.m.”, “091”: “7:45 a.m. to 7:49 a.m.”, “094”: “8:00 a.m. to 8:04 a.m.”, “122”: “10:20 a.m. to 10:24 a.m.”, “142”: “12:00 p.m. to 12:04 p.m.”, “146”: “12:20 p.m. to 12:24 p.m.”, “163”: “1:45 p.m. to 1:49 p.m.”, “165”: “1:55 p.m. to 1:59 p.m.”, “171”: “2:25 p.m. to 2:29 p.m.”, “184”: “3:30 p.m. to 3:34 p.m.”, “189”: “3:55 p.m. to 3:59 p.m.”, “192”: “4:10 p.m. to 4:14 p.m.”, “198”: “4:40 p.m. to 4:44 p.m.”, “210”: “5:40 p.m. to 5:44 p.m.”, “218”: “6:20 p.m. to 6:24 p.m.”, “220”: “6:30 p.m. to 6:34 p.m.”, “221”: “6:35 p.m. to 6:39 p.m.”, “222”: “6:40 p.m. to 6:44 p.m.”, “224”: “6:50 p.m. to 6:54 p.m.”, “227”: “7:05 p.m. to 7:09 p.m.”, “228”: “7:10 p.m. to 7:14 p.m.”, “251”: “9:05 p.m. to 9:09 p.m.”, “256”: “9:30 p.m. to 9:34 p.m.”, “259”: “9:45 p.m. to 9:49 p.m.”, “262”: “10:00 p.m. to 10:04 p.m.”, “270”: “10:40 p.m. to 10:44 p.m.”, “271”: “10:45 p.m. to 10:49 p.m.”, “276”: “11:10 p.m. to 11:14 p.m.”, “284”: “11:50 p.m. to 11:54 p.m.”, “006”: “12:25 a.m. to 12:29 a.m.”, “008”: “12:40 a.m. to 12:44 a.m.”, “009”: “12:45 a.m. to 12:49 a.m.”, “011”: “1:00 a.m. to 1:04 a.m.”, “017”: “1:30 a.m. to 1:34 a.m.”, “020”: “1:45 a.m. to 1:49 a.m.”, “031”: “2:45 a.m. to 2:49 a.m.”, “039”: “3:25 a.m. to 3:29 a.m.”, “053”: “4:35 a.m. to 4:39 a.m.”, “065”: “5:35 a.m. to 5:39 a.m.”, “075”: “6:25 a.m. to 6:29 a.m.”, “085”: “7:15 a.m. to 7:19 a.m.”, “090”: “7:40 a.m. to 7:44 a.m.”, “101”: “8:35 a.m. to 8:39 a.m.”, “107”: “9:05 a.m. to 9:09 a.m.”, “121”: “10:15 a.m. to 10:19 a.m.”, “124”: “10:30 a.m. to 10:34 a.m.”, “137”: “11:35 a.m. to 11:39 a.m.”, “156”: “1:10 p.m. to 1:14 p.m.”, “164”: “1:50 p.m. to 1:54 p.m.”, “173”: “2:35 p.m. to 2:39 p.m.”, “197”: “4:35 p.m. to 4:39 p.m.”, “202”: “5:00 p.m. to 5:04 p.m.”, “234”: “7:40 p.m. to 7:44 p.m.”, “235”: “7:45 p.m. to 7:49 p.m.”, “246”: “8:40 p.m. to 8:44 p.m.”, “249”: “8:55 p.m. to 8:59 p.m.”, “257”: “9:35 p.m. to 9:39 p.m.”, “273”: “10:55 p.m. to 10:59 p.m.”, “277”: “11:15 p.m. to 11:19 p.m.”, “002”: “12:05 a.m. to 12:09 a.m.”, “004”: “12:15 a.m. to 12:19 a.m.”, “015”: “1:20 a.m. to 1:24 a.m.”, “034”: “3:00 a.m. to 3:04 a.m.”, “035”: “3:05 a.m. to 3:09 a.m.”, “042”: “3:40 a.m. to 3:44 a.m.”, “044”: “3:50 a.m. to 3:54 a.m.”, “050”: “4:20 a.m. to 4:24 a.m.”, “052”: “4:30 a.m. to 4:34 a.m.”, “055”: “4:45 a.m. to 4:49 a.m.”, “069”: “5:55 a.m. to 5:59 a.m.”, “071”: “6:05 a.m. to 6:09 a.m.”, “077”: “6:35 a.m. to 6:39 a.m.”, “079”: “6:45 a.m. to 6:49 a.m.”, “082”: “7:00 a.m. to 7:04 a.m.”, “089”: “7:35 a.m. to 7:39 a.m.”, “092”: “7:50 a.m. to 7:54 a.m.”, “093”: “7:55 a.m. to 7:59 a.m.”, “097”: “8:15 a.m. to 8:19 a.m.”, “117”: “9:55 a.m. to 9:59 a.m.”, “118”: “10:00 a.m. to 10:04 a.m.”, “129”: “10:55 a.m. to 10:59 a.m.”, “132”: “11:10 a.m. to 11:14 a.m.”, “138”: “11:40 a.m. to 11:44 a.m.”, “144”: “12:10 p.m. to 12:14 p.m.”, “148”: “12:30 p.m. to 12:34 p.m.”, “150”: “12:40 p.m. to 12:44 p.m.”, “152”: “12:50 p.m. to 12:54 p.m.”, “166”: “2:00 p.m. to 2:04 p.m.”, “181”: “3:15 p.m. to 3:19 p.m.”, “183”: “3:25 p.m. to 3:29 p.m.”, “205”: “5:15 p.m. to 5:19 p.m.”, “219”: “6:25 p.m. to 6:29 p.m.”, “230”: “7:20 p.m. to 7:24 p.m.”, “233”: “7:35 p.m. to 7:39 p.m.”, “239”: “8:05 p.m. to 8:09 p.m.”, “244”: “8:30 p.m. to 8:34 p.m.”, “254”: “9:20 p.m. to 9:24 p.m.”, “265”: “10:15 p.m. to 10:19 p.m.”, “272”: “10:50 p.m. to 10:54 p.m.”, “013”: “1:10 a.m. to 1:14 a.m.”, “014”: “1:15 a.m. to 1:19 a.m.”, “019”: “1:40 a.m. to 1:44 a.m.”, “022”: “2:00 a.m. to 2:04 a.m.”, “033”: “2:55 a.m. to 2:59 a.m.”, “037”: “3:15 a.m. to 3:19 a.m.”, “041”: “3:35 a.m. to 3:39 a.m.”, “059”: “5:05 a.m. to 5:09 a.m.”, “067”: “5:45 a.m. to 5:49 a.m.”, “068”: “5:50 a.m. to 5:54 a.m.”, “074”: “6:20 a.m. to 6:24 a.m.”, “080”: “6:50 a.m. to 6:54 a.m.”, “084”: “7:10 a.m. to 7:14 a.m.”, “088”: “7:30 a.m. to 7:34 a.m.”, “095”: “8:05 a.m. to 8:09 a.m.”, “100”: “8:30 a.m. to 8:34 a.m.”, “125”: “10:35 a.m. to 10:39 a.m.”, “140”: “11:50 a.m. to 11:54 a.m.”, “172”: “2:30 p.m. to 2:34 p.m.”, “178”: “3:00 p.m. to 3:04 p.m.”, “182”: “3:20 p.m. to 3:24 p.m.”, “185”: “3:35 p.m. to 3:39 p.m.”, “187”: “3:45 p.m. to 3:49 p.m.”, “199”: “4:45 p.m. to 4:49 p.m.”, “206”: “5:20 p.m. to 5:24 p.m.”, “208”: “5:30 p.m. to 5:34 p.m.”, “209”: “5:35 p.m. to 5:39 p.m.”, “243”: “8:25 p.m. to 8:29 p.m.”, “268”: “10:30 p.m. to 10:34 p.m.”, “269”: “10:35 p.m. to 10:39 p.m.”, “279”: “11:25 p.m. to 11:29 p.m.”, “001”: “12:00 a.m. to 12:04 a.m.”, “005”: “12:20 a.m. to 12:24 a.m.”, “007”: “12:30 a.m. to 12:39 a.m.”, “023”: “2:05 a.m. to 2:09 a.m.”, “025”: “2:15 a.m. to 2:19 a.m.”, “029”: “2:35 a.m. to 2:39 a.m.”, “036”: “3:10 a.m. to 3:14 a.m.”, “043”: “3:45 a.m. to 3:49 a.m.”, “046”: “4:00 a.m. to 4:04 a.m.”, “051”: “4:25 a.m. to 4:29 a.m.”, “056”: “4:50 a.m. to 4:54 a.m.”, “073”: “6:15 a.m. to 6:19 a.m.”, “081”: “6:55 a.m. to 6:59 a.m.”, “098”: “8:20 a.m. to 8:24 a.m.”, “103”: “8:45 a.m. to 8:49 a.m.”, “106”: “9:00 a.m. to 9:04 a.m.”, “114”: “9:40 a.m. to 9:44 a.m.”, “135”: “11:25 a.m. to 11:29 a.m.”, “143”: “12:05 p.m. to 12:09 p.m.”, “149”: “12:35 p.m. to 12:39 p.m.”, “157”: “1:15 p.m. to 1:19 p.m.”, “158”: “1:20 p.m. to 1:24 p.m.”, “160”: “1:30 p.m. to 1:34 p.m.”, “170”: “2:20 p.m. to 2:24 p.m.”, “174”: “2:40 p.m. to 2:44 p.m.”, “179”: “3:05 p.m. to 3:09 p.m.”, “194”: “4:20 p.m. to 4:24 p.m.”, “196”: “4:30 p.m. to 4:34 p.m.”, “211”: “5:45 p.m. to 5:49 p.m.”, “212”: “5:50 p.m. to 5:54 p.m.”, “214”: “6:00 p.m. to 6:04 p.m.”, “241”: “8:15 p.m. to 8:19 p.m.”, “264”: “10:10 p.m. to 10:14 p.m.”, “266”: “10:20 p.m. to 10:24 p.m.”, “016”: “1:25 a.m. to 1:29 a.m.”, “018”: “1:35 a.m. to 1:39 a.m.”, “021”: “1:50 a.m. to 1:59 a.m.”, “028”: “2:30 a.m. to 2:34 a.m.”, “054”: “4:40 a.m. to 4:44 a.m.”, “060”: “5:10 a.m. to 5:14 a.m.”, “064”: “5:30 a.m. to 5:34 a.m.”, “070”: “6:00 a.m. to 6:04 a.m.”, “078”: “6:40 a.m. to 6:44 a.m.”, “087”: “7:25 a.m. to 7:29 a.m.”, “105”: “8:55 a.m. to 8:59 a.m.”, “111”: “9:25 a.m. to 9:29 a.m.”, “119”: “10:05 a.m. to 10:09 a.m.”, “123”: “10:25 a.m. to 10:29 a.m.”, “126”: “10:40 a.m. to 10:44 a.m.”, “134”: “11:20 a.m. to 11:24 a.m.”, “139”: “11:45 a.m. to 11:49 a.m.”, “141”: “11:55 a.m. to 11:59 a.m.”, “151”: “12:45 p.m. to 12:49 p.m.”, “153”: “12:55 p.m. to 12:59 p.m.”, “169”: “2:15 p.m. to 2:19 p.m.”, “180”: “3:10 p.m. to 3:14 p.m.”, “203”: “5:05 p.m. to 5:09 p.m.”, “204”: “5:10 p.m. to 5:14 p.m.”, “207”: “5:25 p.m. to 5:29 p.m.”, “215”: “6:05 p.m. to 6:09 p.m.”, “216”: “6:10 p.m. to 6:14 p.m.”, “217”: “6:15 p.m. to 6:19 p.m.”, “223”: “6:45 p.m. to 6:49 p.m.”, “225”: “6:55 p.m. to 6:59 p.m.”, “247”: “8:45 p.m. to 8:49 p.m.”, “248”: “8:50 p.m. to 8:54 p.m.”, “252”: “9:10 p.m. to 9:14 p.m.”, “253”: “9:15 p.m. to 9:19 p.m.”, “255”: “9:25 p.m. to 9:29 p.m.”, “263”: “10:05 p.m. to 10:09 p.m.”, “267”: “10:25 p.m. to 10:29 p.m.”, “278”: “11:20 p.m. to 11:24 p.m.”, “280”: “11:30 p.m. to 11:34 p.m.”, “281”: “11:35 p.m. to 11:39 p.m.”, “282”: “11:40 p.m. to 11:44 p.m.”, “0”: “N/A (not a worker; worker who worked from home)”, “003”: “12:10 a.m. to 12:14 a.m.”, “010”: “12:50 a.m. to 12:59 a.m.”, “038”: “3:20 a.m. to 3:24 a.m.”, “049”: “4:15 a.m. to 4:19 a.m.”, “057”: “4:55 a.m. to 4:59 a.m.”, “061”: “5:15 a.m. to 5:19 a.m.”, “062”: “5:20 a.m. to 5:24 a.m.”, “072”: “6:10 a.m. to 6:14 a.m.”, “083”: “7:05 a.m. to 7:09 a.m.”, “104”: “8:50 a.m. to 8:54 a.m.”, “108”: “9:10 a.m. to 9:14 a.m.”, “116”: “9:50 a.m. to 9:54 a.m.”, “128”: “10:50 a.m. to 10:54 a.m.”, “133”: “11:15 a.m. to 11:19 a.m.”, “136”: “11:30 a.m. to 11:34 a.m.”, “147”: “12:25 p.m. to 12:29 p.m.”, “154”: “1:00 p.m. to 1:04 p.m.”, “155”: “1:05 p.m. to 1:09 p.m.”, “161”: “1:35 p.m. to 1:39 p.m.”, “162”: “1:40 p.m. to 1:44 p.m.”, “167”: “2:05 p.m. to 2:09 p.m.”, “175”: “2:45 p.m. to 2:49 p.m.”, “177”: “2:55 p.m. to 2:59 p.m.”, “186”: “3:40 p.m. to 3:44 p.m.”, “190”: “4:00 p.m. to 4:04 p.m.”, “191”: “4:05 p.m. to 4:09 p.m.”, “193”: “4:15 p.m. to 4:19 p.m.”, “200”: “4:50 p.m. to 4:54 p.m.”, “201”: “4:55 p.m. to 4:59 p.m.”, “226”: “7:00 p.m. to 7:04 p.m.”, “232”: “7:30 p.m. to 7:34 p.m.”, “236”: “7:50 p.m. to 7:54 p.m.”, “237”: “7:55 p.m. to 7:59 p.m.”, “238”: “8:00 p.m. to 8:04 p.m.”, “240”: “8:10 p.m. to 8:14 p.m.”, “242”: “8:20 p.m. to 8:24 p.m.”, “245”: “8:35 p.m. to 8:39 p.m.”, “250”: “9:00 p.m. to 9:04 p.m.”, “275”: “11:05 p.m. to 11:09 p.m.”, “283”: “11:45 p.m. to 11:49 p.m.”, “285”: “11:55 p.m. to 11:59 p.m.”, “012”: “1:05 a.m. to 1:09 a.m.”, “024”: “2:10 a.m. to 2:14 a.m.”, “026”: “2:20 a.m. to 2:24 a.m.”, “027”: “2:25 a.m. to 2:29 a.m.”, “030”: “2:40 a.m. to 2:44 a.m.”, “032”: “2:50 a.m. to 2:54 a.m.”, “040”: “3:30 a.m. to 3:34 a.m.”, “045”: “3:55 a.m. to 3:59 a.m.”, “047”: “4:05 a.m. to 4:09 a.m.”, “063”: “5:25 a.m. to 5:29 a.m.”, “066”: “5:40 a.m. to 5:44 a.m.”, “086”: “7:20 a.m. to 7:24 a.m.”, “096”: “8:10 a.m. to 8:14 a.m.”, “099”: “8:25 a.m. to 8:29 a.m.”, “102”: “8:40 a.m. to 8:44 a.m.”, “109”: “9:15 a.m. to 9:19 a.m.”, “110”: “9:20 a.m. to 9:24 a.m.”, “112”: “9:30 a.m. to 9:34 a.m.”, “113”: “9:35 a.m. to 9:39 a.m.”, “115”: “9:45 a.m. to 9:49 a.m.”, “120”: “10:10 a.m. to 10:14 a.m.”, “127”: “10:45 a.m. to 10:49 a.m.”, “130”: “11:00 a.m. to 11:04 a.m.”, “131”: “11:05 a.m. to 11:09 a.m.”, “145”: “12:15 p.m. to 12:19 p.m.”, “159”: “1:25 p.m. to 1:29 p.m.”, “168”: “2:10 p.m. to 2:14 p.m.”, “176”: “2:50 p.m. to 2:54 p.m.”, “188”: “3:50 p.m. to 3:54 p.m.”, “195”: “4:25 p.m. to 4:29 p.m.”, “213”: “5:55 p.m. to 5:59 p.m.”, “229”: “7:15 p.m. to 7:19 p.m.”, “231”: “7:25 p.m. to 7:29 p.m.” jwdp - Time of departure for work - hour and minute “014”: “4:10 a.m. to 4:19 a.m.”, “015”: “4:20 a.m. to 4:29 a.m.”, “017”: “4:40 a.m. to 4:49 a.m.”, “022”: “5:15 a.m. to 5:19 a.m.”, “035”: “6:20 a.m. to 6:24 a.m.”, “046”: “7:15 a.m. to 7:19 a.m.”, “065”: “8:50 a.m. to 8:54 a.m.”, “068”: “9:05 a.m. to 9:09 a.m.”, “076”: “9:45 a.m. to 9:49 a.m.”, “079”: “10:00 a.m. to 10:09 a.m.”, “083”: “10:40 a.m. to 10:49 a.m.”, “085”: “11:00 a.m. to 11:09 a.m.”, “086”: “11:10 a.m. to 11:19 a.m.”, “103”: “2:00 p.m. to 2:09 p.m.”, “105”: “2:20 p.m. to 2:29 p.m.”, “118”: “4:30 p.m. to 4:39 p.m.”, “127”: “6:00 p.m. to 6:09 p.m.”, “130”: “6:30 p.m. to 6:39 p.m.”, “131”: “6:40 p.m. to 6:49 p.m.”, “139”: “9:20 p.m. to 9:29 p.m.”, “141”: “9:40 p.m. to 9:49 p.m.”, “149”: “11:00 p.m. to 11:29 p.m.”, “057”: “8:10 a.m. to 8:14 a.m.”, “059”: “8:20 a.m. to 8:24 a.m.”, “063”: “8:40 a.m. to 8:44 a.m.”, “066”: “8:55 a.m. to 8:59 a.m.”, “073”: “9:30 a.m. to 9:34 a.m.”, “078”: “9:55 a.m. to 9:59 a.m.”, “100”: “1:30 p.m. to 1:39 p.m.”, “101”: “1:40 p.m. to 1:49 p.m.”, “104”: “2:10 p.m. to 2:19 p.m.”, “107”: “2:40 p.m. to 2:49 p.m.”, “111”: “3:20 p.m. to 3:29 p.m.”, “116”: “4:10 p.m. to 4:19 p.m.”, “128”: “6:10 p.m. to 6:19 p.m.”, “150”: “11:30 p.m. to 11:59 p.m.”, “0”: “N/A (not a worker; worker who worked from home)”, “010”: “3:30 a.m. to 3:39 a.m.”, “011”: “3:40 a.m. to 3:49 a.m.”, “019”: “5:00 a.m. to 5:04 a.m.”, “028”: “5:45 a.m. to 5:49 a.m.”, “044”: “7:05 a.m. to 7:09 a.m.”, “045”: “7:10 a.m. to 7:14 a.m.”, “047”: “7:20 a.m. to 7:24 a.m.”, “049”: “7:30 a.m. to 7:34 a.m.”, “053”: “7:50 a.m. to 7:54 a.m.”, “055”: “8:00 a.m. to 8:04 a.m.”, “056”: “8:05 a.m. to 8:09 a.m.”, “084”: “10:50 a.m. to 10:59 a.m.”, “090”: “11:50 a.m. to 11:59 a.m.”, “092”: “12:10 p.m. to 12:19 p.m.”, “110”: “3:10 p.m. to 3:19 p.m.”, “112”: “3:30 p.m. to 3:39 p.m.”, “120”: “4:50 p.m. to 4:59 p.m.”, “132”: “6:50 p.m. to 6:59 p.m.”, “133”: “7:00 p.m. to 7:29 p.m.”, “134”: “7:30 p.m. to 7:59 p.m.”, “009”: “3:20 a.m. to 3:29 a.m.”, “023”: “5:20 a.m. to 5:24 a.m.”, “031”: “6:00 a.m. to 6:04 a.m.”, “038”: “6:35 a.m. to 6:39 a.m.”, “040”: “6:45 a.m. to 6:49 a.m.”, “050”: “7:35 a.m. to 7:39 a.m.”, “060”: “8:25 a.m. to 8:29 a.m.”, “062”: “8:35 a.m. to 8:39 a.m.”, “064”: “8:45 a.m. to 8:49 a.m.”, “067”: “9:00 a.m. to 9:04 a.m.”, “069”: “9:10 a.m. to 9:14 a.m.”, “082”: “10:30 a.m. to 10:39 a.m.”, “095”: “12:40 p.m. to 12:49 p.m.”, “096”: “12:50 p.m. to 12:59 p.m.”, “097”: “1:00 p.m. to 1:09 p.m.”, “119”: “4:40 p.m. to 4:49 p.m.”, “121”: “5:00 p.m. to 5:09 p.m.”, “135”: “8:00 p.m. to 8:29 p.m.”, “003”: “1:00 a.m. to 1:29 a.m.”, “033”: “6:10 a.m. to 6:14 a.m.”, “036”: “6:25 a.m. to 6:29 a.m.”, “041”: “6:50 a.m. to 6:54 a.m.”, “061”: “8:30 a.m. to 8:34 a.m.”, “081”: “10:20 a.m. to 10:29 a.m.”, “093”: “12:20 p.m. to 12:29 p.m.”, “098”: “1:10 p.m. to 1:19 p.m.”, “102”: “1:50 p.m. to 1:59 p.m.”, “109”: “3:00 p.m. to 3:09 p.m.”, “115”: “4:00 p.m. to 4:09 p.m.”, “126”: “5:50 p.m. to 5:59 p.m.”, “143”: “10:00 p.m. to 10:09 p.m.”, “145”: “10:20 p.m. to 10:29 p.m.”, “001”: “12:00 a.m. to 12:29 a.m.”, “006”: “2:30 a.m. to 2:59 a.m.”, “012”: “3:50 a.m. to 3:59 a.m.”, “013”: “4:00 a.m. to 4:09 a.m.”, “016”: “4:30 a.m. to 4:39 a.m.”, “025”: “5:30 a.m. to 5:34 a.m.”, “026”: “5:35 a.m. to 5:39 a.m.”, “030”: “5:55 a.m. to 5:59 a.m.”, “077”: “9:50 a.m. to 9:54 a.m.”, “087”: “11:20 a.m. to 11:29 a.m.”, “088”: “11:30 a.m. to 11:39 a.m.”, “094”: “12:30 p.m. to 12:39 p.m.”, “106”: “2:30 p.m. to 2:39 p.m.”, “108”: “2:50 p.m. to 2:59 p.m.”, “122”: “5:10 p.m. to 5:19 p.m.”, “123”: “5:20 p.m. to 5:29 p.m.”, “124”: “5:30 p.m. to 5:39 p.m.”, “144”: “10:10 p.m. to 10:19 p.m.”, “002”: “12:30 a.m. to 12:59 a.m.”, “004”: “1:30 a.m. to 1:59 a.m.”, “005”: “2:00 a.m. to 2:29 a.m.”, “007”: “3:00 a.m. to 3:09 a.m.”, “020”: “5:05 a.m. to 5:09 a.m.”, “021”: “5:10 a.m. to 5:14 a.m.”, “024”: “5:25 a.m. to 5:29 a.m.”, “027”: “5:40 a.m. to 5:44 a.m.”, “034”: “6:15 a.m. to 6:19 a.m.”, “039”: “6:40 a.m. to 6:44 a.m.”, “042”: “6:55 a.m. to 6:59 a.m.”, “043”: “7:00 a.m. to 7:04 a.m.”, “048”: “7:25 a.m. to 7:29 a.m.”, “051”: “7:40 a.m. to 7:44 a.m.”, “058”: “8:15 a.m. to 8:19 a.m.”, “072”: “9:25 a.m. to 9:29 a.m.”, “074”: “9:35 a.m. to 9:39 a.m.”, “075”: “9:40 a.m. to 9:44 a.m.”, “091”: “12:00 p.m. to 12:09 p.m.”, “113”: “3:40 p.m. to 3:49 p.m.”, “117”: “4:20 p.m. to 4:29 p.m.”, “125”: “5:40 p.m. to 5:49 p.m.”, “129”: “6:20 p.m. to 6:29 p.m.”, “136”: “8:30 p.m. to 8:59 p.m.”, “137”: “9:00 p.m. to 9:09 p.m.”, “140”: “9:30 p.m. to 9:39 p.m.”, “008”: “3:10 a.m. to 3:19 a.m.”, “018”: “4:50 a.m. to 4:59 a.m.”, “029”: “5:50 a.m. to 5:54 a.m.”, “032”: “6:05 a.m. to 6:09 a.m.”, “037”: “6:30 a.m. to 6:34 a.m.”, “052”: “7:45 a.m. to 7:49 a.m.”, “054”: “7:55 a.m. to 7:59 a.m.”, “070”: “9:15 a.m. to 9:19 a.m.”, “071”: “9:20 a.m. to 9:24 a.m.”, “080”: “10:10 a.m. to 10:19 a.m.”, “089”: “11:40 a.m. to 11:49 a.m.”, “099”: “1:20 p.m. to 1:29 p.m.”, “114”: “3:50 p.m. to 3:59 p.m.”, “138”: “9:10 p.m. to 9:19 p.m.”, “142”: “9:50 p.m. to 9:59 p.m.”, “146”: “10:30 p.m. to 10:39 p.m.”, “147”: “10:40 p.m. to 10:49 p.m.”, “148”: “10:50 p.m. to 10:59 p.m.” jwmnp - Travel time to work “0”: “N/A (not a worker or worker who worked at home)” }, “range”: [ { “min”: “1”, “max”: “200”, “description”: “1 to 200 minutes to get to work (Top-coded)” sex “1”: “Male”, “2”: “Female” fer - Gave birth to child within the past 12 months “0”: “N/A (less than 15 years/greater than 50 years/ male)”, “2”: “No”, “1”: “Yes” hhl - Household language “0”: “N/A (GQ/vacant)”, “2”: “Spanish”, “3”: “Other Indo-European languages”, “1”: “English Only”, “4”: “Asian and Pacific Island languages”, “5”: “Other Language” hispeed - Broadband (high speed) Internet service such as cable, fiber optic, or DSL service “2”: “No”, “1”: “Yes”, “0”: “N/A (GQ/vacant/no paid access to the internet jwtrns - Means of transportation to work”11”: “Worked from home”, “07”: “Taxicab”, “02”: “Bus”, “05”: “Light rail, streetcar, or trolley”, “0”: “N/A (not a worker-not in the labor force, including persons under 16 years; unemployed; employed, with a job but not at work; Armed Forces, with a job but not at work)”, “12”: “Other method”, “04”: “Long-distance train or commuter rail”, “09”: “Bicycle”, “01”: “Car, truck, or van”, “03”: “Subway or elevated rail”, “06”: “Ferryboat”, “10”: “Walked”, “08”: “Motorcycle” sch - School enrollment “0”: “N/A (less than 3 years old)”, “3”: “Yes, private school or college or home school”, “1”: “No, has not attended in the last 3 months”, “2”: “Yes, public school or public college” schl - Educational attainment “16”: “Regular high school diploma”, “01”: “No schooling completed”, “04”: “Grade 1”, “03”: “Kindergarten”, “07”: “Grade 4”, “23”: “Professional degree beyond a bachelor’s degree”, “19”: “1 or more years of college credit, no degree”, “22”: “Master’s degree”, “10”: “Grade 7”, “20”: “Associate’s degree”, “0”: “N/A (less than 3 years old)”, “02”: “Nursery school, preschool”, “21”: “Bachelor’s degree”, “08”: “Grade 5”, “24”: “Doctorate degree”, “06”: “Grade 3”, “14”: “Grade 11”, “17”: “GED or alternative credential”, “12”: “Grade 9”, “15”: “12th grade - no diploma”, “13”: “Grade 10”, “05”: “Grade 2”, “11”: “Grade 8”, “18”: “Some college, but less than 1 year”, “09”: “Grade 6”</p>
-</section>
-</section>
-</section>
-<section id="validating-query-function-single-year" class="level2">
-<h2 class="anchored" data-anchor-id="validating-query-function-single-year">Validating query function (single year)</h2>
-<p>Now, let’s run some sample calls.</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>year<span class="ot">=</span><span class="dv">2022</span></span>
-<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>test_results <span class="ot">&lt;-</span> <span class="fu">getToTibble</span>(</span>
-<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">queryCensus</span>(year,<span class="at">catVars=</span><span class="fu">c</span>(<span class="st">'SEX'</span>,<span class="st">'HISPEED'</span>),<span class="at">geoLevel=</span><span class="st">'Division'</span>,<span class="at">geoSubset =</span> <span class="dv">2</span>,<span class="at">numVars=</span><span class="fu">c</span>(<span class="st">'AGEP'</span>,<span class="st">'PWGTP'</span>,<span class="st">'GASP'</span>))</span>
-<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>test_results</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">getToTibble</span>(test_results)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 429,663 × 6
-   V1    V2    V3    V4    V5      V6      
-   &lt;chr&gt; &lt;chr&gt; &lt;chr&gt; &lt;chr&gt; &lt;chr&gt;   &lt;chr&gt;   
- 1 AGEP  PWGTP GASP  SEX   HISPEED division
- 2 19    31    3     2     0       2       
- 3 20    24    3     1     0       2       
- 4 56    21    3     1     0       2       
- 5 75    72    3     1     0       2       
- 6 21    30    3     1     0       2       
- 7 42    7     3     2     0       2       
- 8 20    53    3     2     0       2       
- 9 31    47    3     1     0       2       
-10 21    11    3     2     0       2       
-# ℹ 429,653 more rows</code></pre>
+<pre><code># A tibble: 44,080 × 5
+   V1    V2    V3    V4    V5   
+   &lt;chr&gt; &lt;chr&gt; &lt;chr&gt; &lt;chr&gt; &lt;chr&gt;
+ 1 SEX   PWGTP MAR   ST    SCHL 
+ 2 2     6     5     17    24   
+ 3 2     23    2     06    24   
+ 4 1     23    3     42    24   
+ 5 1     80    5     49    24   
+ 6 1     16    1     18    24   
+ 7 1     107   3     18    24   
+ 8 2     10    5     13    24   
+ 9 1     22    1     39    24   
+10 2     127   5     32    24   
+# ℹ 44,070 more rows</code></pre>
 </div>
 </div>
-<p>Success! Let’s try ALL OF THEM.</p>
+<p>Success!</p>
+</section>
+<section id="fcn-query-the-census-api" class="level3">
+<h3 class="anchored" data-anchor-id="fcn-query-the-census-api">Fcn: Query [the] Census [API]</h3>
+<p>Developing a function to build and query the API according to user parameters is complex.</p>
+<p>It requires a good deal of error checking to ensure valid field names. Helper functions will be used for validating parameters. Defaults will exist for parameters, including a default to subset by <em>State = 17 Illinois/IL</em> to keep data sizes manageable (unless otherwise specified in the function call).</p>
+<p>For a reminder of valid fields, consult the previous section on <em>API Fields</em>.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>year<span class="ot">=</span><span class="dv">2022</span></span>
-<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>test_results <span class="ot">&lt;-</span> <span class="fu">getToTibble</span>(</span>
-<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">queryCensus</span>(year,</span>
-<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>              <span class="at">catVars=</span><span class="fu">c</span>(<span class="st">'SEX'</span>,<span class="st">'HISPEED'</span>,<span class="st">'FER'</span>,<span class="st">'HHL'</span>,<span class="st">'JWTRNS'</span>,<span class="st">'SCH'</span>,<span class="st">'SCHL'</span>),</span>
-<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>              <span class="at">geoLevel=</span><span class="st">'State'</span>,</span>
-<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>              <span class="at">geoSubset =</span> <span class="dv">17</span>,</span>
-<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>              <span class="at">numVars=</span><span class="fu">c</span>(<span class="st">'AGEP'</span>,<span class="st">'PWGTP'</span>,<span class="st">'GASP'</span>,<span class="st">'GRPIP'</span>,<span class="st">'JWAP'</span>,<span class="st">'JWDP'</span>,<span class="st">'JWMNP'</span>))</span>
-<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>test_results</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co"># function:</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="co">#   queryCensus(year=2022,numVars=c('AGEP','PWGTP'),catVars='SEX',geoLevel='All',geoSubset=17)</span></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a><span class="co"># purpose:</span></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a><span class="co">#   Build and call the Census API, returning NA if invalid or the result of the correct GET call.</span></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a><span class="co"># arguments: </span></span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a><span class="co">#   year - year to query</span></span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a><span class="co">#   numVars - vector of chars, 1 or more</span></span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a><span class="co">#   catVars - vector of chars, 1 or more</span></span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a><span class="co">#   geoLevel - one string matching permitted values</span></span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a><span class="co">#   geoSubset - vector of chars, 1 or more, for subset by geoLevel (no restrictions)</span></span>
+<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a><span class="co"># returns: </span></span>
+<span id="cb21-15"><a href="#cb21-15" aria-hidden="true" tabindex="-1"></a><span class="co">#   NA if even one parameter is invalid, else the result of the GET call</span></span>
+<span id="cb21-16"><a href="#cb21-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-17"><a href="#cb21-17" aria-hidden="true" tabindex="-1"></a><span class="co"># error handling: </span></span>
+<span id="cb21-18"><a href="#cb21-18" aria-hidden="true" tabindex="-1"></a><span class="co">#   NA if any parameter is invalid</span></span>
+<span id="cb21-19"><a href="#cb21-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-20"><a href="#cb21-20" aria-hidden="true" tabindex="-1"></a>queryCensus <span class="ot">&lt;-</span> <span class="cf">function</span>(<span class="at">year =</span> <span class="dv">2022</span>,</span>
+<span id="cb21-21"><a href="#cb21-21" aria-hidden="true" tabindex="-1"></a>                        <span class="at">numVars =</span> <span class="fu">c</span>(<span class="st">'AGEP'</span>,<span class="st">'PWGTP'</span>),</span>
+<span id="cb21-22"><a href="#cb21-22" aria-hidden="true" tabindex="-1"></a>                        <span class="at">catVars =</span> <span class="st">'SEX'</span>,</span>
+<span id="cb21-23"><a href="#cb21-23" aria-hidden="true" tabindex="-1"></a>                        <span class="at">geoLevel =</span> <span class="st">'All'</span>,</span>
+<span id="cb21-24"><a href="#cb21-24" aria-hidden="true" tabindex="-1"></a>                        <span class="at">geoSubset =</span> <span class="dv">17</span> ) { </span>
+<span id="cb21-25"><a href="#cb21-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-26"><a href="#cb21-26" aria-hidden="true" tabindex="-1"></a>  <span class="co">#validate arguments</span></span>
+<span id="cb21-27"><a href="#cb21-27" aria-hidden="true" tabindex="-1"></a>  status <span class="ot">&lt;-</span> <span class="fu">checkYear</span>(year) <span class="sc">&amp;</span></span>
+<span id="cb21-28"><a href="#cb21-28" aria-hidden="true" tabindex="-1"></a>            <span class="fu">checkNumVars</span>(numVars) <span class="sc">&amp;</span></span>
+<span id="cb21-29"><a href="#cb21-29" aria-hidden="true" tabindex="-1"></a>            <span class="fu">checkCatVars</span>(catVars) <span class="sc">&amp;</span></span>
+<span id="cb21-30"><a href="#cb21-30" aria-hidden="true" tabindex="-1"></a>            <span class="fu">checkGeo</span>(geoLevel)</span>
+<span id="cb21-31"><a href="#cb21-31" aria-hidden="true" tabindex="-1"></a>  <span class="co">#if any of these failed, status is now FALSE and exit returning NA</span></span>
+<span id="cb21-32"><a href="#cb21-32" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span>status) </span>
+<span id="cb21-33"><a href="#cb21-33" aria-hidden="true" tabindex="-1"></a>    <span class="fu">return</span>(<span class="cn">NA</span>)</span>
+<span id="cb21-34"><a href="#cb21-34" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb21-35"><a href="#cb21-35" aria-hidden="true" tabindex="-1"></a>  <span class="co">#otherwise, proceed and combine strings appropriately for query parameters</span></span>
+<span id="cb21-36"><a href="#cb21-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-37"><a href="#cb21-37" aria-hidden="true" tabindex="-1"></a>  <span class="co">#combine numeric and categorical vars for the get parameter</span></span>
+<span id="cb21-38"><a href="#cb21-38" aria-hidden="true" tabindex="-1"></a>  get_param <span class="ot">&lt;-</span> <span class="fu">paste</span>(<span class="fu">paste</span>(numVars,<span class="at">sep =</span> <span class="st">','</span>,<span class="at">collapse =</span> <span class="st">','</span>),</span>
+<span id="cb21-39"><a href="#cb21-39" aria-hidden="true" tabindex="-1"></a>                     <span class="st">','</span>,</span>
+<span id="cb21-40"><a href="#cb21-40" aria-hidden="true" tabindex="-1"></a>                     <span class="fu">paste</span>(catVars,<span class="at">sep =</span> <span class="st">','</span>,<span class="at">collapse =</span> <span class="st">','</span>),</span>
+<span id="cb21-41"><a href="#cb21-41" aria-hidden="true" tabindex="-1"></a>                     <span class="at">sep =</span> <span class="st">''</span>,</span>
+<span id="cb21-42"><a href="#cb21-42" aria-hidden="true" tabindex="-1"></a>                     <span class="at">collapse =</span> <span class="st">''</span></span>
+<span id="cb21-43"><a href="#cb21-43" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb21-44"><a href="#cb21-44" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb21-45"><a href="#cb21-45" aria-hidden="true" tabindex="-1"></a>  <span class="co">#since geo level passed validation, only need to switch 'All' for 'State' if applicable</span></span>
+<span id="cb21-46"><a href="#cb21-46" aria-hidden="true" tabindex="-1"></a>  geoLevelCode <span class="ot">&lt;-</span> <span class="cf">if</span>(geoLevel <span class="sc">==</span> <span class="st">'All'</span>) <span class="st">'State'</span> <span class="cf">else</span> geoLevel</span>
+<span id="cb21-47"><a href="#cb21-47" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb21-48"><a href="#cb21-48" aria-hidden="true" tabindex="-1"></a>  <span class="co">#prepare subset strings</span></span>
+<span id="cb21-49"><a href="#cb21-49" aria-hidden="true" tabindex="-1"></a>  subset_param <span class="ot">&lt;-</span> <span class="fu">paste</span>(<span class="fu">paste</span>(geoSubset,<span class="at">sep =</span> <span class="st">','</span>,<span class="at">collapse =</span> <span class="st">','</span>),</span>
+<span id="cb21-50"><a href="#cb21-50" aria-hidden="true" tabindex="-1"></a>                        <span class="at">sep =</span> <span class="st">''</span>,</span>
+<span id="cb21-51"><a href="#cb21-51" aria-hidden="true" tabindex="-1"></a>                        <span class="at">collapse =</span> <span class="st">''</span></span>
+<span id="cb21-52"><a href="#cb21-52" aria-hidden="true" tabindex="-1"></a>                        )</span>
+<span id="cb21-53"><a href="#cb21-53" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb21-54"><a href="#cb21-54" aria-hidden="true" tabindex="-1"></a>  <span class="do">###############</span></span>
+<span id="cb21-55"><a href="#cb21-55" aria-hidden="true" tabindex="-1"></a>  <span class="co">#this is how to do the state stuff</span></span>
+<span id="cb21-56"><a href="#cb21-56" aria-hidden="true" tabindex="-1"></a>  <span class="co">#can remove all the 'ST' garbage above</span></span>
+<span id="cb21-57"><a href="#cb21-57" aria-hidden="true" tabindex="-1"></a>  <span class="co">#https://api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR,ST&amp;SCHL=24&amp;for=state:13,14,15,16,17&amp;SCHL=24</span></span>
+<span id="cb21-58"><a href="#cb21-58" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb21-59"><a href="#cb21-59" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb21-60"><a href="#cb21-60" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb21-61"><a href="#cb21-61" aria-hidden="true" tabindex="-1"></a>  <span class="co">#base URL for example: api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR&amp;SCHL=24&amp;key=YOUR_KEY</span></span>
+<span id="cb21-62"><a href="#cb21-62" aria-hidden="true" tabindex="-1"></a>  <span class="co">#build and call API</span></span>
+<span id="cb21-63"><a href="#cb21-63" aria-hidden="true" tabindex="-1"></a>  base_URL1 <span class="ot">&lt;-</span> <span class="st">"https://api.census.gov/data/"</span></span>
+<span id="cb21-64"><a href="#cb21-64" aria-hidden="true" tabindex="-1"></a>  base_URL2 <span class="ot">&lt;-</span> <span class="st">"/acs/acs1/pums?"</span></span>
+<span id="cb21-65"><a href="#cb21-65" aria-hidden="true" tabindex="-1"></a>  query_URL <span class="ot">&lt;-</span> <span class="fu">paste</span>(base_URL1,</span>
+<span id="cb21-66"><a href="#cb21-66" aria-hidden="true" tabindex="-1"></a>                     year,</span>
+<span id="cb21-67"><a href="#cb21-67" aria-hidden="true" tabindex="-1"></a>                     base_URL2,</span>
+<span id="cb21-68"><a href="#cb21-68" aria-hidden="true" tabindex="-1"></a>                     <span class="st">'get='</span>,</span>
+<span id="cb21-69"><a href="#cb21-69" aria-hidden="true" tabindex="-1"></a>                     get_param,</span>
+<span id="cb21-70"><a href="#cb21-70" aria-hidden="true" tabindex="-1"></a>                     <span class="st">'&amp;for='</span>,</span>
+<span id="cb21-71"><a href="#cb21-71" aria-hidden="true" tabindex="-1"></a>                     geoLevelCode,</span>
+<span id="cb21-72"><a href="#cb21-72" aria-hidden="true" tabindex="-1"></a>                     <span class="st">':'</span>,</span>
+<span id="cb21-73"><a href="#cb21-73" aria-hidden="true" tabindex="-1"></a>                     subset_param,</span>
+<span id="cb21-74"><a href="#cb21-74" aria-hidden="true" tabindex="-1"></a>                     <span class="at">sep =</span> <span class="st">''</span>,</span>
+<span id="cb21-75"><a href="#cb21-75" aria-hidden="true" tabindex="-1"></a>                     <span class="at">collapse =</span> <span class="st">''</span>)</span>
+<span id="cb21-76"><a href="#cb21-76" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb21-77"><a href="#cb21-77" aria-hidden="true" tabindex="-1"></a>  <span class="co">#display the final URL for helpful reference</span></span>
+<span id="cb21-78"><a href="#cb21-78" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(query_URL)</span>
+<span id="cb21-79"><a href="#cb21-79" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb21-80"><a href="#cb21-80" aria-hidden="true" tabindex="-1"></a>  <span class="co">#run query and return GET results</span></span>
+<span id="cb21-81"><a href="#cb21-81" aria-hidden="true" tabindex="-1"></a>  query_results <span class="ot">&lt;-</span> <span class="fu">GET</span>(query_URL)</span>
+<span id="cb21-82"><a href="#cb21-82" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb21-83"><a href="#cb21-83" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(query_results)</span>
+<span id="cb21-84"><a href="#cb21-84" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="fcn-format-api-results" class="level3">
+<h3 class="anchored" data-anchor-id="fcn-format-api-results">Fcn: Format [API] Results</h3>
+<p>We need to adjust numeric fields from char to num/time and replace enumerated categorical field values with representative labels in our tibble. For instance, ‘HISPEED’ has three values 0,1,2 which correspond to N/A, Yes, No.&nbsp;</p>
+<p>We need to transform each column according to its type and lookup values. Also, we take the header names from row 1 into the column labels, removing row 1.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="co"># function:</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a><span class="co">#   formatResults(results,year=2022)</span></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a><span class="co"># purpose:</span></span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a><span class="co">#   Replace columns of the tibble with appropriate type and values. Also fix column labels/header.</span></span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a><span class="co"># arguments: </span></span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a><span class="co">#   results - tibble of Census results</span></span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a><span class="co">#   year - year to query</span></span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a><span class="co"># returns: </span></span>
+<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a><span class="co">#   Adjusted, formatted tibble</span></span>
+<span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-14"><a href="#cb22-14" aria-hidden="true" tabindex="-1"></a><span class="co"># error handling: </span></span>
+<span id="cb22-15"><a href="#cb22-15" aria-hidden="true" tabindex="-1"></a><span class="co">#   none!!</span></span>
+<span id="cb22-16"><a href="#cb22-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-17"><a href="#cb22-17" aria-hidden="true" tabindex="-1"></a>formatResults <span class="ot">&lt;-</span> <span class="cf">function</span>(results,<span class="at">year=</span><span class="dv">2022</span>) {</span>
+<span id="cb22-18"><a href="#cb22-18" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb22-19"><a href="#cb22-19" aria-hidden="true" tabindex="-1"></a>  <span class="co">#if year is a field, get ready to swap it back</span></span>
+<span id="cb22-20"><a href="#cb22-20" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="st">'Year'</span> <span class="sc">%in%</span> <span class="fu">names</span>(results))</span>
+<span id="cb22-21"><a href="#cb22-21" aria-hidden="true" tabindex="-1"></a>    year_on <span class="ot">&lt;-</span> <span class="cn">TRUE</span></span>
+<span id="cb22-22"><a href="#cb22-22" aria-hidden="true" tabindex="-1"></a>  <span class="cf">else</span></span>
+<span id="cb22-23"><a href="#cb22-23" aria-hidden="true" tabindex="-1"></a>    year_on <span class="ot">&lt;-</span> <span class="cn">FALSE</span></span>
+<span id="cb22-24"><a href="#cb22-24" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb22-25"><a href="#cb22-25" aria-hidden="true" tabindex="-1"></a>  <span class="co">#update the column names from row1</span></span>
+<span id="cb22-26"><a href="#cb22-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">names</span>(results) <span class="ot">&lt;-</span> results[<span class="dv">1</span>,]</span>
+<span id="cb22-27"><a href="#cb22-27" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb22-28"><a href="#cb22-28" aria-hidden="true" tabindex="-1"></a>  <span class="co">#fix year if needed</span></span>
+<span id="cb22-29"><a href="#cb22-29" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (year_on) <span class="fu">attributes</span>(results)<span class="sc">$</span>names[<span class="fu">length</span>(results)] <span class="ot">&lt;-</span> <span class="st">'Year'</span></span>
+<span id="cb22-30"><a href="#cb22-30" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb22-31"><a href="#cb22-31" aria-hidden="true" tabindex="-1"></a>  <span class="co">#remove row1</span></span>
+<span id="cb22-32"><a href="#cb22-32" aria-hidden="true" tabindex="-1"></a>  results <span class="ot">&lt;-</span> results[<span class="sc">-</span><span class="dv">1</span>,]</span>
+<span id="cb22-33"><a href="#cb22-33" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb22-34"><a href="#cb22-34" aria-hidden="true" tabindex="-1"></a>  <span class="co">#vector of all possible GET variables that may require revision</span></span>
+<span id="cb22-35"><a href="#cb22-35" aria-hidden="true" tabindex="-1"></a>  all_variables <span class="ot">=</span> <span class="fu">c</span>(<span class="st">'AGEP'</span>, <span class="co">#NUMERICS</span></span>
+<span id="cb22-36"><a href="#cb22-36" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'PWGTP'</span>,</span>
+<span id="cb22-37"><a href="#cb22-37" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'GASP'</span>,</span>
+<span id="cb22-38"><a href="#cb22-38" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'GRPIP'</span>,</span>
+<span id="cb22-39"><a href="#cb22-39" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'JWMNP'</span>,</span>
+<span id="cb22-40"><a href="#cb22-40" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'JWAP'</span>, <span class="co">#TIME</span></span>
+<span id="cb22-41"><a href="#cb22-41" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'JWDP'</span>,</span>
+<span id="cb22-42"><a href="#cb22-42" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'SEX'</span>, <span class="co">#CATEGORICAL</span></span>
+<span id="cb22-43"><a href="#cb22-43" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'FER'</span>,</span>
+<span id="cb22-44"><a href="#cb22-44" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'HHL'</span>,</span>
+<span id="cb22-45"><a href="#cb22-45" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'HISPEED'</span>,</span>
+<span id="cb22-46"><a href="#cb22-46" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'JWTRNS'</span>,</span>
+<span id="cb22-47"><a href="#cb22-47" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'SCH'</span>,</span>
+<span id="cb22-48"><a href="#cb22-48" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'SCHL'</span>,</span>
+<span id="cb22-49"><a href="#cb22-49" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'Region'</span>,</span>
+<span id="cb22-50"><a href="#cb22-50" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'Division'</span>,</span>
+<span id="cb22-51"><a href="#cb22-51" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'State'</span>)</span>
+<span id="cb22-52"><a href="#cb22-52" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb22-53"><a href="#cb22-53" aria-hidden="true" tabindex="-1"></a>  <span class="co">#vectors of all possible variables by types</span></span>
+<span id="cb22-54"><a href="#cb22-54" aria-hidden="true" tabindex="-1"></a>  numeric_variables <span class="ot">=</span> <span class="fu">c</span>(<span class="st">'AGEP'</span>,</span>
+<span id="cb22-55"><a href="#cb22-55" aria-hidden="true" tabindex="-1"></a>                        <span class="st">'PWGTP'</span>,</span>
+<span id="cb22-56"><a href="#cb22-56" aria-hidden="true" tabindex="-1"></a>                        <span class="st">'GASP'</span>,</span>
+<span id="cb22-57"><a href="#cb22-57" aria-hidden="true" tabindex="-1"></a>                        <span class="st">'GRPIP'</span>,</span>
+<span id="cb22-58"><a href="#cb22-58" aria-hidden="true" tabindex="-1"></a>                        <span class="st">'JWMNP'</span>)</span>
+<span id="cb22-59"><a href="#cb22-59" aria-hidden="true" tabindex="-1"></a>  time_variables <span class="ot">=</span> <span class="fu">c</span>(<span class="st">'JWAP'</span>,</span>
+<span id="cb22-60"><a href="#cb22-60" aria-hidden="true" tabindex="-1"></a>                     <span class="st">'JWDP'</span>)</span>
+<span id="cb22-61"><a href="#cb22-61" aria-hidden="true" tabindex="-1"></a>  cat_variables <span class="ot">=</span> <span class="fu">c</span>(<span class="st">'SEX'</span>,</span>
+<span id="cb22-62"><a href="#cb22-62" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'FER'</span>,</span>
+<span id="cb22-63"><a href="#cb22-63" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'HHL'</span>,</span>
+<span id="cb22-64"><a href="#cb22-64" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'HISPEED'</span>,</span>
+<span id="cb22-65"><a href="#cb22-65" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'JWTRNS'</span>,</span>
+<span id="cb22-66"><a href="#cb22-66" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'SCH'</span>,</span>
+<span id="cb22-67"><a href="#cb22-67" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'SCHL'</span>,</span>
+<span id="cb22-68"><a href="#cb22-68" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'Region'</span>,</span>
+<span id="cb22-69"><a href="#cb22-69" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'Division'</span>,</span>
+<span id="cb22-70"><a href="#cb22-70" aria-hidden="true" tabindex="-1"></a>                    <span class="st">'State'</span>)</span>
+<span id="cb22-71"><a href="#cb22-71" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb22-72"><a href="#cb22-72" aria-hidden="true" tabindex="-1"></a>  <span class="co">#loop through all possible vars requiring update</span></span>
+<span id="cb22-73"><a href="#cb22-73" aria-hidden="true" tabindex="-1"></a>  <span class="co">#if it exists in our tibble as a column, revise the column type appropriately</span></span>
+<span id="cb22-74"><a href="#cb22-74" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (varName <span class="cf">in</span> all_variables) {</span>
+<span id="cb22-75"><a href="#cb22-75" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb22-76"><a href="#cb22-76" aria-hidden="true" tabindex="-1"></a>    <span class="co">#loop through all columns in tibble</span></span>
+<span id="cb22-77"><a href="#cb22-77" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> (colName <span class="cf">in</span> <span class="fu">names</span>(results)) {</span>
+<span id="cb22-78"><a href="#cb22-78" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-79"><a href="#cb22-79" aria-hidden="true" tabindex="-1"></a>      <span class="co">#if a match </span></span>
+<span id="cb22-80"><a href="#cb22-80" aria-hidden="true" tabindex="-1"></a>      <span class="cf">if</span> (varName <span class="sc">==</span> colName) {</span>
+<span id="cb22-81"><a href="#cb22-81" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb22-82"><a href="#cb22-82" aria-hidden="true" tabindex="-1"></a>        <span class="co">#for a numeric type, swap its contents to numeric</span></span>
+<span id="cb22-83"><a href="#cb22-83" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (varName <span class="sc">%in%</span> numeric_variables) {</span>
+<span id="cb22-84"><a href="#cb22-84" aria-hidden="true" tabindex="-1"></a>          results[varName] <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(results[[varName]])</span>
+<span id="cb22-85"><a href="#cb22-85" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb22-86"><a href="#cb22-86" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb22-87"><a href="#cb22-87" aria-hidden="true" tabindex="-1"></a>        <span class="co">#for a time type, swap its contents to numeric</span></span>
+<span id="cb22-88"><a href="#cb22-88" aria-hidden="true" tabindex="-1"></a>     <span class="co">#   if (varName %in% time_variables) {</span></span>
+<span id="cb22-89"><a href="#cb22-89" aria-hidden="true" tabindex="-1"></a>      <span class="co">#    results |&gt; mutate(varName = as.numeric(results[varName]))</span></span>
+<span id="cb22-90"><a href="#cb22-90" aria-hidden="true" tabindex="-1"></a>         </span>
+<span id="cb22-91"><a href="#cb22-91" aria-hidden="true" tabindex="-1"></a>          <span class="co">#revise values </span></span>
+<span id="cb22-92"><a href="#cb22-92" aria-hidden="true" tabindex="-1"></a><span class="co">#        }</span></span>
+<span id="cb22-93"><a href="#cb22-93" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb22-94"><a href="#cb22-94" aria-hidden="true" tabindex="-1"></a>        <span class="co">#for a categ type, swap its contents from index to label </span></span>
+<span id="cb22-95"><a href="#cb22-95" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (varName <span class="sc">%in%</span> cat_variables) {</span>
+<span id="cb22-96"><a href="#cb22-96" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-97"><a href="#cb22-97" aria-hidden="true" tabindex="-1"></a>          <span class="co">#pull lookup table for cat var</span></span>
+<span id="cb22-98"><a href="#cb22-98" aria-hidden="true" tabindex="-1"></a>          <span class="co">#special handling if 'State' because that has to lookup using "ST"</span></span>
+<span id="cb22-99"><a href="#cb22-99" aria-hidden="true" tabindex="-1"></a>          <span class="cf">if</span>(varName<span class="sc">==</span><span class="st">'State'</span>)</span>
+<span id="cb22-100"><a href="#cb22-100" aria-hidden="true" tabindex="-1"></a>            lookup <span class="ot">&lt;-</span> <span class="fu">getLookup</span>(<span class="st">'ST'</span>,year)</span>
+<span id="cb22-101"><a href="#cb22-101" aria-hidden="true" tabindex="-1"></a>          <span class="cf">else</span></span>
+<span id="cb22-102"><a href="#cb22-102" aria-hidden="true" tabindex="-1"></a>            lookup <span class="ot">&lt;-</span> <span class="fu">getLookup</span>(varName,year)</span>
+<span id="cb22-103"><a href="#cb22-103" aria-hidden="true" tabindex="-1"></a>          </span>
+<span id="cb22-104"><a href="#cb22-104" aria-hidden="true" tabindex="-1"></a>          <span class="co">#make a temp join but only keep the replaced char labels in the result column</span></span>
+<span id="cb22-105"><a href="#cb22-105" aria-hidden="true" tabindex="-1"></a>          temp <span class="ot">&lt;-</span> results[varName]</span>
+<span id="cb22-106"><a href="#cb22-106" aria-hidden="true" tabindex="-1"></a>          <span class="fu">names</span>(temp)<span class="ot">=</span><span class="st">'name'</span></span>
+<span id="cb22-107"><a href="#cb22-107" aria-hidden="true" tabindex="-1"></a>          temp_join <span class="ot">&lt;-</span> <span class="fu">left_join</span>(temp,lookup,<span class="at">by=</span><span class="fu">join_by</span>(name <span class="sc">==</span> name))</span>
+<span id="cb22-108"><a href="#cb22-108" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-109"><a href="#cb22-109" aria-hidden="true" tabindex="-1"></a>          <span class="co">#revise values </span></span>
+<span id="cb22-110"><a href="#cb22-110" aria-hidden="true" tabindex="-1"></a>          results[varName] <span class="ot">&lt;-</span> temp_join<span class="sc">$</span>value</span>
+<span id="cb22-111"><a href="#cb22-111" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb22-112"><a href="#cb22-112" aria-hidden="true" tabindex="-1"></a>                                      </span>
+<span id="cb22-113"><a href="#cb22-113" aria-hidden="true" tabindex="-1"></a>      }</span>
+<span id="cb22-114"><a href="#cb22-114" aria-hidden="true" tabindex="-1"></a>      </span>
+<span id="cb22-115"><a href="#cb22-115" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb22-116"><a href="#cb22-116" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb22-117"><a href="#cb22-117" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb22-118"><a href="#cb22-118" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb22-119"><a href="#cb22-119" aria-hidden="true" tabindex="-1"></a>  <span class="co">#special handling for geo lookup, because in function call previously it doesn't like it </span></span>
+<span id="cb22-120"><a href="#cb22-120" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="st">"region"</span> <span class="sc">%in%</span> <span class="fu">names</span>(results)) {</span>
+<span id="cb22-121"><a href="#cb22-121" aria-hidden="true" tabindex="-1"></a>    geoLevel <span class="ot">&lt;-</span> <span class="st">"region"</span></span>
+<span id="cb22-122"><a href="#cb22-122" aria-hidden="true" tabindex="-1"></a>    geoLevel_query <span class="ot">&lt;-</span> <span class="st">"REGION"</span></span>
+<span id="cb22-123"><a href="#cb22-123" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb22-124"><a href="#cb22-124" aria-hidden="true" tabindex="-1"></a>  <span class="cf">else</span> <span class="cf">if</span>(<span class="st">"division"</span> <span class="sc">%in%</span> <span class="fu">names</span>(results)) {</span>
+<span id="cb22-125"><a href="#cb22-125" aria-hidden="true" tabindex="-1"></a>    geoLevel <span class="ot">&lt;-</span> <span class="st">"division"</span></span>
+<span id="cb22-126"><a href="#cb22-126" aria-hidden="true" tabindex="-1"></a>    geoLevel_query <span class="ot">&lt;-</span> <span class="st">"DIVISION"</span></span>
+<span id="cb22-127"><a href="#cb22-127" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb22-128"><a href="#cb22-128" aria-hidden="true" tabindex="-1"></a>  <span class="cf">else</span> {</span>
+<span id="cb22-129"><a href="#cb22-129" aria-hidden="true" tabindex="-1"></a>    geoLevel <span class="ot">&lt;-</span> <span class="st">"state"</span></span>
+<span id="cb22-130"><a href="#cb22-130" aria-hidden="true" tabindex="-1"></a>    geoLevel_query <span class="ot">&lt;-</span> <span class="st">"ST"</span></span>
+<span id="cb22-131"><a href="#cb22-131" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb22-132"><a href="#cb22-132" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb22-133"><a href="#cb22-133" aria-hidden="true" tabindex="-1"></a>  <span class="co">#pull lookup table for geo field</span></span>
+<span id="cb22-134"><a href="#cb22-134" aria-hidden="true" tabindex="-1"></a>  lookup <span class="ot">&lt;-</span> <span class="fu">getLookup</span>(geoLevel_query,year)</span>
+<span id="cb22-135"><a href="#cb22-135" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb22-136"><a href="#cb22-136" aria-hidden="true" tabindex="-1"></a>  <span class="co">#make a temp join but only keep the replaced char labels in the result column</span></span>
+<span id="cb22-137"><a href="#cb22-137" aria-hidden="true" tabindex="-1"></a>  temp2 <span class="ot">&lt;-</span> results[geoLevel]</span>
+<span id="cb22-138"><a href="#cb22-138" aria-hidden="true" tabindex="-1"></a>  <span class="fu">names</span>(temp2)<span class="ot">=</span><span class="st">'name'</span></span>
+<span id="cb22-139"><a href="#cb22-139" aria-hidden="true" tabindex="-1"></a>  temp2_join <span class="ot">&lt;-</span> <span class="fu">left_join</span>(temp2,lookup,<span class="at">by=</span><span class="fu">join_by</span>(name <span class="sc">==</span> name))</span>
+<span id="cb22-140"><a href="#cb22-140" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb22-141"><a href="#cb22-141" aria-hidden="true" tabindex="-1"></a>  <span class="co">#revise values </span></span>
+<span id="cb22-142"><a href="#cb22-142" aria-hidden="true" tabindex="-1"></a>  results[geoLevel] <span class="ot">&lt;-</span> temp2_join<span class="sc">$</span>value</span>
+<span id="cb22-143"><a href="#cb22-143" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb22-144"><a href="#cb22-144" aria-hidden="true" tabindex="-1"></a>  <span class="co">#return revised tibble</span></span>
+<span id="cb22-145"><a href="#cb22-145" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(results)</span>
+<span id="cb22-146"><a href="#cb22-146" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="fcn-query-multiple-years" class="level3">
+<h3 class="anchored" data-anchor-id="fcn-query-multiple-years">Fcn: Query Multiple Years</h3>
+<p>This final function will take a set of 1+ years, loop through calls to query the Census on each year endpoint, then combine and format and return a single tibble!</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="co"># function:</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a><span class="co">#   queryMultipleYears(years=c(2022),numVars,catVars,geoLevel,geoSubset)</span></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a><span class="co"># purpose:</span></span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a><span class="co">#   Loop through calls to get query for each year, then combine and format, and return the final single tibble of data. Year is a column added to the results of each query.</span></span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a><span class="co"># arguments: </span></span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a><span class="co">#   years - vector of numeric indicating each year of interest</span></span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a><span class="co">#   numVars - vector of chars, 1 or more</span></span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a><span class="co">#   catVars - vector of chars, 1 or more</span></span>
+<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a><span class="co">#   geoLevel - one string matching permitted values</span></span>
+<span id="cb23-12"><a href="#cb23-12" aria-hidden="true" tabindex="-1"></a><span class="co">#   geoSubset - vector of chars, 1 or more, for subset by geoLevel (no restrictions)</span></span>
+<span id="cb23-13"><a href="#cb23-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-14"><a href="#cb23-14" aria-hidden="true" tabindex="-1"></a><span class="co"># returns: </span></span>
+<span id="cb23-15"><a href="#cb23-15" aria-hidden="true" tabindex="-1"></a><span class="co">#   Complete, consolidated, formatted tibble</span></span>
+<span id="cb23-16"><a href="#cb23-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-17"><a href="#cb23-17" aria-hidden="true" tabindex="-1"></a><span class="co"># error handling: </span></span>
+<span id="cb23-18"><a href="#cb23-18" aria-hidden="true" tabindex="-1"></a><span class="co">#   none!!</span></span>
+<span id="cb23-19"><a href="#cb23-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-20"><a href="#cb23-20" aria-hidden="true" tabindex="-1"></a>queryMultipleYears <span class="ot">&lt;-</span> <span class="cf">function</span>(<span class="at">years=</span><span class="fu">c</span>(<span class="dv">2022</span>),<span class="at">numVars=</span><span class="fu">c</span>(<span class="st">'AGEP'</span>,<span class="st">'PWGTP'</span>),<span class="at">catVars=</span><span class="fu">c</span>(<span class="st">'SEX'</span>),<span class="at">geoLevel=</span><span class="st">'State'</span>,<span class="at">geoSubset=</span><span class="dv">17</span>) {</span>
+<span id="cb23-21"><a href="#cb23-21" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb23-22"><a href="#cb23-22" aria-hidden="true" tabindex="-1"></a>  <span class="co">#init large_tibble</span></span>
+<span id="cb23-23"><a href="#cb23-23" aria-hidden="true" tabindex="-1"></a>  large_tibble <span class="ot">&lt;-</span> <span class="fu">tibble</span>()</span>
+<span id="cb23-24"><a href="#cb23-24" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb23-25"><a href="#cb23-25" aria-hidden="true" tabindex="-1"></a>  <span class="co">#loop through all years in vector</span></span>
+<span id="cb23-26"><a href="#cb23-26" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (years_i <span class="cf">in</span> years) {</span>
+<span id="cb23-27"><a href="#cb23-27" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb23-28"><a href="#cb23-28" aria-hidden="true" tabindex="-1"></a>    <span class="co">#query the api</span></span>
+<span id="cb23-29"><a href="#cb23-29" aria-hidden="true" tabindex="-1"></a>    results_query_i <span class="ot">&lt;-</span> <span class="fu">queryCensus</span>(years_i,numVars,catVars)<span class="co">#,geoLevel,geoSubset)</span></span>
+<span id="cb23-30"><a href="#cb23-30" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb23-31"><a href="#cb23-31" aria-hidden="true" tabindex="-1"></a>    <span class="co">#translate to a tibble</span></span>
+<span id="cb23-32"><a href="#cb23-32" aria-hidden="true" tabindex="-1"></a>    tibble_query_i <span class="ot">&lt;-</span> <span class="fu">getToTibble</span>(results_query_i)</span>
+<span id="cb23-33"><a href="#cb23-33" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb23-34"><a href="#cb23-34" aria-hidden="true" tabindex="-1"></a>    <span class="co">#append the year variable</span></span>
+<span id="cb23-35"><a href="#cb23-35" aria-hidden="true" tabindex="-1"></a>    tibble_query_i[<span class="st">'Year'</span>] <span class="ot">&lt;-</span> years_i</span>
+<span id="cb23-36"><a href="#cb23-36" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb23-37"><a href="#cb23-37" aria-hidden="true" tabindex="-1"></a>    <span class="co">#add to large tibble</span></span>
+<span id="cb23-38"><a href="#cb23-38" aria-hidden="true" tabindex="-1"></a>    large_tibble <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(large_tibble,tibble_query_i)</span>
+<span id="cb23-39"><a href="#cb23-39" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb23-40"><a href="#cb23-40" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb23-41"><a href="#cb23-41" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb23-42"><a href="#cb23-42" aria-hidden="true" tabindex="-1"></a>  <span class="co">#format</span></span>
+<span id="cb23-43"><a href="#cb23-43" aria-hidden="true" tabindex="-1"></a>  large_tibble_formatted <span class="ot">&lt;-</span> <span class="fu">formatResults</span>(large_tibble)</span>
+<span id="cb23-44"><a href="#cb23-44" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb23-45"><a href="#cb23-45" aria-hidden="true" tabindex="-1"></a>  <span class="co">#remove any NA rows which happened due to headers in every query</span></span>
+<span id="cb23-46"><a href="#cb23-46" aria-hidden="true" tabindex="-1"></a>  large_tibble_formatted <span class="ot">&lt;-</span> <span class="fu">filter</span>(large_tibble_formatted,<span class="sc">!</span><span class="fu">is.na</span>(large_tibble_formatted[[<span class="dv">1</span>]]))</span>
+<span id="cb23-47"><a href="#cb23-47" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb23-48"><a href="#cb23-48" aria-hidden="true" tabindex="-1"></a>  <span class="co">#return</span></span>
+<span id="cb23-49"><a href="#cb23-49" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(large_tibble_formatted)</span>
+<span id="cb23-50"><a href="#cb23-50" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<pre><code>-   Conditions:
+    -   Call single year function repeatedly as needed.
+    -   Combine data into one final tibble, including `year` variable.</code></pre>
+</section>
+</section>
+<section id="validate-custom-query-function-1yr" class="level2">
+<h2 class="anchored" data-anchor-id="validate-custom-query-function-1yr">Validate Custom Query Function (1yr)</h2>
+<p>Now, let’s run some sample calls. First, a call with no arguments, relying solely on defaults.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>test_results <span class="ot">&lt;-</span> <span class="fu">getToTibble</span>(<span class="fu">queryCensus</span>())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "https://api.census.gov/data/2022/acs/acs1/pums?get=AGEP,PWGTP,SEX&amp;for=State:17"</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>test_results</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 128,047 × 4
+   V1    V2    V3    V4   
+   &lt;chr&gt; &lt;chr&gt; &lt;chr&gt; &lt;chr&gt;
+ 1 AGEP  PWGTP SEX   state
+ 2 82    32    2     17   
+ 3 43    91    1     17   
+ 4 18    45    2     17   
+ 5 49    38    1     17   
+ 6 42    8     1     17   
+ 7 83    7     1     17   
+ 8 88    6     2     17   
+ 9 23    59    2     17   
+10 56    64    2     17   
+# ℹ 128,037 more rows</code></pre>
+</div>
+</div>
+<p>Success! Next, let’s try every possible parameter. For simplicity, we will use State=17.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>test_results <span class="ot">&lt;-</span> <span class="fu">getToTibble</span>(</span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">queryCensus</span>(<span class="dv">2022</span>,</span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>              <span class="at">catVars=</span><span class="fu">c</span>(<span class="st">'SEX'</span>,<span class="st">'HISPEED'</span>,<span class="st">'FER'</span>,<span class="st">'HHL'</span>,<span class="st">'JWTRNS'</span>,<span class="st">'SCH'</span>,<span class="st">'SCHL'</span>),</span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>              <span class="at">geoLevel=</span><span class="st">'State'</span>,</span>
+<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a>              <span class="at">geoSubset =</span> <span class="dv">17</span>,</span>
+<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a>              <span class="at">numVars=</span><span class="fu">c</span>(<span class="st">'AGEP'</span>,<span class="st">'PWGTP'</span>,<span class="st">'GASP'</span>,<span class="st">'GRPIP'</span>,<span class="st">'JWAP'</span>,<span class="st">'JWDP'</span>,<span class="st">'JWMNP'</span>))</span>
+<span id="cb29-7"><a href="#cb29-7" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "https://api.census.gov/data/2022/acs/acs1/pums?get=AGEP,PWGTP,GASP,GRPIP,JWAP,JWDP,JWMNP,SEX,HISPEED,FER,HHL,JWTRNS,SCH,SCHL&amp;for=State:17"</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>test_results</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 128,047 × 15
    V1    V2    V3    V4    V5    V6    V7    V8    V9    V10   V11   V12   V13  
@@ -871,17 +990,14 @@ Attaching package: 'tidyr'</code></pre>
 # ℹ 2 more variables: V14 &lt;chr&gt;, V15 &lt;chr&gt;</code></pre>
 </div>
 </div>
-<p><em>Note that if syntax changes or limitations exist for other years of data (for instance, say ‘HISPEED’ was not available in year X), requests may fail.</em></p>
-<p>Now, let’s try using the formatting function to replace categorical variables and make numeric into numbers.</p>
+<p>Success! Now, let’s apply the formatting function to replace categorical enumerated elements, make numeric columns into numberic type, and fix column names.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>test_results_formatted <span class="ot">&lt;-</span> <span class="fu">formatResults</span>(test_results,year)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>test_results_formatted <span class="ot">&lt;-</span> <span class="fu">formatResults</span>(test_results)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
 <pre><code>Warning: The `value` argument of `names&lt;-()` must be a character vector as of tibble
 3.0.0.</code></pre>
 </div>
-</div>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>test_results_formatted</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>test_results_formatted</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 128,046 × 15
     AGEP PWGTP  GASP GRPIP JWAP  JWDP  JWMNP SEX    HISPEED   FER   HHL   JWTRNS
@@ -900,21 +1016,83 @@ Attaching package: 'tidyr'</code></pre>
 # ℹ 3 more variables: SCH &lt;chr&gt;, SCHL &lt;chr&gt;, state &lt;chr&gt;</code></pre>
 </div>
 </div>
-<ol start="4" type="1">
-<li><p>Write a function to allow user to specify multiple years of survey data <strong>and</strong> all other options above.</p>
-<ul>
-<li>Conditions:
-<ul>
-<li>Call single year function repeatedly as needed.</li>
-<li>Combine data into one final tibble, including <code>year</code> variable.</li>
-</ul></li>
-</ul></li>
-</ol>
+<p>Success!</p>
+</section>
+<section id="validate-multi-year-query-function" class="level2">
+<h2 class="anchored" data-anchor-id="validate-multi-year-query-function">Validate Multi-Year Query Function</h2>
+<p>Lastly, let’s call the function for multi-year results in a single tibble. Start simple with defaults, first.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>multi_test_tibble <span class="ot">&lt;-</span> <span class="fu">queryMultipleYears</span>(<span class="at">years=</span><span class="fu">c</span>(<span class="dv">2021</span>,<span class="dv">2022</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "https://api.census.gov/data/2021/acs/acs1/pums?get=AGEP,PWGTP,SEX&amp;for=State:17"
+[1] "https://api.census.gov/data/2022/acs/acs1/pums?get=AGEP,PWGTP,SEX&amp;for=State:17"</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in formatResults(large_tibble): NAs introduced by coercion
+Warning in formatResults(large_tibble): NAs introduced by coercion</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>multi_test_tibble</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 254,669 × 5
+    AGEP PWGTP SEX    state        Year
+   &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt;  &lt;chr&gt;       &lt;dbl&gt;
+ 1    37   104 Male   Illinois/IL  2021
+ 2    48    29 Female Illinois/IL  2021
+ 3    66    19 Female Illinois/IL  2021
+ 4    51    84 Male   Illinois/IL  2021
+ 5    86     4 Male   Illinois/IL  2021
+ 6    32    86 Male   Illinois/IL  2021
+ 7    61    30 Female Illinois/IL  2021
+ 8    50    38 Female Illinois/IL  2021
+ 9    74     6 Female Illinois/IL  2021
+10    36     8 Male   Illinois/IL  2021
+# ℹ 254,659 more rows</code></pre>
+</div>
+</div>
+<p>Success! Now, once more with all variables and a third year.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a>multi_test_tibble_2 <span class="ot">&lt;-</span> <span class="fu">queryMultipleYears</span>(<span class="at">years=</span><span class="fu">c</span>(<span class="dv">2019</span>,<span class="dv">2021</span>,<span class="dv">2022</span>),</span>
+<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a>                                          <span class="at">catVars=</span><span class="fu">c</span>(<span class="st">'SEX'</span>,<span class="st">'HISPEED'</span>,<span class="st">'FER'</span>,<span class="st">'HHL'</span>,<span class="st">'JWTRNS'</span>,<span class="st">'SCH'</span>,<span class="st">'SCHL'</span>),</span>
+<span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a>                                          <span class="at">geoLevel=</span><span class="st">'State'</span>,</span>
+<span id="cb42-4"><a href="#cb42-4" aria-hidden="true" tabindex="-1"></a>                                          <span class="at">geoSubset =</span> <span class="dv">17</span>,</span>
+<span id="cb42-5"><a href="#cb42-5" aria-hidden="true" tabindex="-1"></a>                                          <span class="at">numVars=</span><span class="fu">c</span>(<span class="st">'AGEP'</span>,<span class="st">'PWGTP'</span>,<span class="st">'GASP'</span>,<span class="st">'GRPIP'</span>,<span class="st">'JWAP'</span>,<span class="st">'JWDP'</span>,<span class="st">'JWMNP'</span>) )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "https://api.census.gov/data/2019/acs/acs1/pums?get=AGEP,PWGTP,GASP,GRPIP,JWAP,JWDP,JWMNP,SEX,HISPEED,FER,HHL,JWTRNS,SCH,SCHL&amp;for=State:17"
+[1] "https://api.census.gov/data/2021/acs/acs1/pums?get=AGEP,PWGTP,GASP,GRPIP,JWAP,JWDP,JWMNP,SEX,HISPEED,FER,HHL,JWTRNS,SCH,SCHL&amp;for=State:17"
+[1] "https://api.census.gov/data/2022/acs/acs1/pums?get=AGEP,PWGTP,GASP,GRPIP,JWAP,JWDP,JWMNP,SEX,HISPEED,FER,HHL,JWTRNS,SCH,SCHL&amp;for=State:17"</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in formatResults(large_tibble): NAs introduced by coercion
+Warning in formatResults(large_tibble): NAs introduced by coercion
+Warning in formatResults(large_tibble): NAs introduced by coercion
+Warning in formatResults(large_tibble): NAs introduced by coercion
+Warning in formatResults(large_tibble): NAs introduced by coercion</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb45"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a>multi_test_tibble_2</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 379,676 × 16
+    AGEP PWGTP  GASP GRPIP JWAP  JWDP  JWMNP SEX    HISPEED   FER   HHL   JWTRNS
+   &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt; &lt;chr&gt; &lt;dbl&gt; &lt;chr&gt;  &lt;chr&gt;     &lt;chr&gt; &lt;chr&gt; &lt;chr&gt; 
+ 1    22   179     3     0 0     0         0 Male   N/A (GQ/… N/A … N/A … Worke…
+ 2    53     3     3     0 0     0         0 Male   N/A (GQ/… N/A … N/A … Worke…
+ 3    35    87     3     0 0     0         0 Male   N/A (GQ/… N/A … N/A … N/A (…
+ 4    42    93     3     0 0     0         0 Male   N/A (GQ/… N/A … N/A … N/A (…
+ 5    18    61     3     0 0     0         0 Male   N/A (GQ/… N/A … N/A … N/A (…
+ 6    58     4     3     0 0     0         0 Male   N/A (GQ/… N/A … N/A … Worke…
+ 7    61     6     3     0 0     0         0 Female N/A (GQ/… N/A … N/A … N/A (…
+ 8    61    19     3     0 0     0         0 Male   N/A (GQ/… N/A … N/A … N/A (…
+ 9    78    11     3     0 0     0         0 Female N/A (GQ/… N/A … N/A … N/A (…
+10    19    92     3     0 0     0         0 Female N/A (GQ/… No    N/A … N/A (…
+# ℹ 379,666 more rows
+# ℹ 4 more variables: SCH &lt;chr&gt;, SCHL &lt;chr&gt;, state &lt;chr&gt;, Year &lt;dbl&gt;</code></pre>
+</div>
+</div>
+<p>Success! Wow!</p>
 </section>
 </section>
-<section id="person-level-records" class="level1">
-<h1>Person Level Records</h1>
-<p>The Census data returns a form of compressed results, where identical rows representing multiple people are condensed to one row with the field <code>PWGTP</code> representing the number of observations (people) associated with that row. We will not replicate these rows to keep our table smaller and simpler, but it must be considered for data summarization to ensure proper proportions are understood.</p>
+<section id="note-on-person-level-records" class="level1">
+<h1>Note on Person Level Records</h1>
+<p>The Census data returns a form of compressed results, where identical rows representing multiple people are condensed to one row with the field <code>PWGTP</code> representing the number of observations (people) associated with that row. We will not replicate these rows to keep our table smaller and simpler, but it must be considered for data summarization to ensure proper proportions/weights are incorporated.</p>
 </section>
 <section id="summarizing" class="level1">
 <h1>Summarizing…</h1>
@@ -959,18 +1137,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
     }
     return false;
   }
-  const clipboard = new window.ClipboardJS('.code-copy-button', {
-    text: function(trigger) {
-      const codeEl = trigger.previousElementSibling.cloneNode(true);
-      for (const childEl of codeEl.children) {
-        if (isCodeAnnotation(childEl)) {
-          childEl.remove();
-        }
-      }
-      return codeEl.innerText;
-    }
-  });
-  clipboard.on('success', function(e) {
+  const onCopySuccess = function(e) {
     // button target
     const button = e.trigger;
     // don't keep focus
@@ -1002,7 +1169,29 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
     }, 1000);
     // clear code selection
     e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
   });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    // For code content inside modals, clipBoardJS needs to be initialized with a container option
+    // TODO: Check when it could be a function (https://github.com/zenorocha/clipboard.js/issues/860)
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
     var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
     var mailtoRegex = new RegExp(/^mailto:/);
       var filterRegex = new RegExp('/' + window.location.host + '/');
@@ -1010,7 +1199,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
         return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
     }
     // Inspect non-navigation links and adorn them if external
- 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool)');
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
     for (var i=0; i<links.length; i++) {
       const link = links[i];
       if (!isInternal(link.href)) {
