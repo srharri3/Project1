@@ -560,9 +560,9 @@ formatResults <- function(results,year=2022) {
                     'JWTRNS',
                     'SCH',
                     'SCHL',
-                    'REGION',
-                    'DIVISION',
-                    'STATE')
+                    'Region',
+                    'Division',
+                    'State')
   
   #vectors of all possible variables by types
   numeric_variables = c('AGEP',
@@ -579,9 +579,9 @@ formatResults <- function(results,year=2022) {
                     'JWTRNS',
                     'SCH',
                     'SCHL',
-                    'REGION',
-                    'DIVISION',
-                    'STATE')
+                    'Region',
+                    'Division',
+                    'State')
   
   #loop through all possible vars requiring update
   #if it exists in our tibble as a column, revise the column type appropriately
@@ -656,6 +656,65 @@ formatResults <- function(results,year=2022) {
 }
 ```
 
+### Fcn: Query Multiple Years
+
+This final function will take a set of 1+ years, loop through calls to query the Census on each year endpoint, then combine and format and return a single tibble!
+
+```{r}
+# function:
+#   queryMultipleYears(years=c(2022),numVars,catVars,geoLevel,geoSubset)
+
+# purpose:
+#   Loop through calls to get query for each year, then combine and format, and return the final single tibble of data. Year is a column added to the results of each query.
+
+# arguments: 
+#   years - vector of numeric indicating each year of interest
+#   numVars - vector of chars, 1 or more
+#   catVars - vector of chars, 1 or more
+#   geoLevel - one string matching permitted values
+#   geoSubset - vector of chars, 1 or more, for subset by geoLevel (no restrictions)
+
+# returns: 
+#   Complete, consolidated, formatted tibble
+
+# error handling: 
+#   none!!
+
+queryMultipleYears <- function(years=c(2022),numVars=c('AGEP','PWGTP'),catVars=c('SEX')){#,geoLevel='State',geoSubset=17) {
+  
+  #init large_tibble
+  large_tibble <- tibble()
+  
+  #loop through all years in vector
+  for (years_i in years) {
+    
+    #query the api
+    results_query_i <- queryCensus(years_i,numVars,catVars)#,geoLevel,geoSubset)
+    
+    #translate to a tibble
+    tibble_query_i <- getToTibble(results_query_i)
+    
+    #append the year variable
+    tibble_query_i['Year'] <- years_i
+    
+    #add to large tibble
+    bind_rows(large_tibble,tibble_query_i)
+    
+  }
+  
+  #format
+  large_tibble_formatted <- formatResults(large_tibble)
+  
+  #return
+  return(large_tibble_formatted)
+}
+```
+
+    -   Conditions:
+        -   Call single year function repeatedly as needed.
+        -   Combine data into one final tibble, including `year` variable.
+
+
 ## Validate Custom Query Function (1yr)
 
 Now, let's run some sample calls. First, a call with no arguments, relying solely on defaults.
@@ -687,17 +746,10 @@ test_results_formatted
 
 Success!
 
-## Fcn: Query Multiple Years
 
-This final function will Write a function to allow user to specify multiple years of survey data **and** all other options above.
+# Note on Person Level Records
 
-    -   Conditions:
-        -   Call single year function repeatedly as needed.
-        -   Combine data into one final tibble, including `year` variable.
-
-# Person Level Records
-
-The Census data returns a form of compressed results, where identical rows representing multiple people are condensed to one row with the field `PWGTP` representing the number of observations (people) associated with that row. We will not replicate these rows to keep our table smaller and simpler, but it must be considered for data summarization to ensure proper proportions are understood.
+The Census data returns a form of compressed results, where identical rows representing multiple people are condensed to one row with the field `PWGTP` representing the number of observations (people) associated with that row. We will not replicate these rows to keep our table smaller and simpler, but it must be considered for data summarization to ensure proper proportions/weights are incorporated.
 
 # Summarizing...
 
