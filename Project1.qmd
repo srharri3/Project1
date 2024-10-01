@@ -1215,6 +1215,10 @@ final_result <- summary.census(test_results_formatted,"AGEP", "SEX")
 ```
 
 ```{r}
+install.packages("ggplot2")
+```
+
+```{r}
 library(ggplot2)
 ```
 
@@ -1234,7 +1238,11 @@ plot_census <- function(test_results_formatted, numVars, catVars) {
   }
   
   
-  boxplot_census <- ggplot(test_results_formatted, aes(x = catVars, y = numVars, weight = PWGTP)) + geom_boxplot()
+  boxplot_census <- ggplot(test_results_formatted, aes(x = get(catVars), y = get(numVars), weight = PWGTP)) + geom_boxplot() +
+    labs(title = paste("Boxplot of", numVars, "by", catVars),
+         x = catVars,
+         y + numVars) +
+    theme_minimal()
     
   print(boxplot_census)
 }
