@@ -793,8 +793,6 @@ The Census data returns a form of compressed results, where identical rows repre
 
 # Summarizing...
 
-Savannah!
-
 Adding additional class of "census" to tibble.
 ```{r}
 class(test_results_formatted) <- c("census", class(test_results_formatted))
@@ -839,7 +837,7 @@ final_result <- summary.census(test_results_formatted,"AGEP", "SEX")
 ```
 
 ```{r}
-install.packages("ggplot2")
+#install.packages("ggplot2")
 ```
 
 ```{r}
@@ -873,7 +871,7 @@ plot_census <- function(test_results_formatted, numVars, catVars) {
 ```
 
 ```{r}
-plot_census(test_results_formatted, "AGEP", "SEX")
+#plot_census(test_results_formatted, "AGEP", "SEX")
 ```
 
 >>>>>>> origin/main
