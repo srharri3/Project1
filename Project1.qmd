@@ -539,8 +539,17 @@ We need to transform each column according to its type and lookup values. Also, 
 
 formatResults <- function(results,year=2022) {
   
+  #if year is a field, get ready to swap it back
+  if ('Year' %in% names(results))
+    year_on <- TRUE
+  else
+    year_on <- FALSE
+  
   #update the column names from row1
   names(results) <- results[1,]
+  
+  #fix year if needed
+  if (year_on) attributes(results)$names[length(results)] <- 'Year'
   
   #remove row1
   results <- results[-1,]
@@ -609,7 +618,11 @@ formatResults <- function(results,year=2022) {
         if (varName %in% cat_variables) {
 
           #pull lookup table for cat var
-          lookup <- getLookup(varName,year)
+          #special handling if 'State' because that has to lookup using "ST"
+          if(varName=='State')
+            lookup <- getLookup('ST',year)
+          else
+            lookup <- getLookup(varName,year)
           
           #make a temp join but only keep the replaced char labels in the result column
           temp <- results[varName]
@@ -680,7 +693,7 @@ This final function will take a set of 1+ years, loop through calls to query the
 # error handling: 
 #   none!!
 
-queryMultipleYears <- function(years=c(2022),numVars=c('AGEP','PWGTP'),catVars=c('SEX')){#,geoLevel='State',geoSubset=17) {
+queryMultipleYears <- function(years=c(2022),numVars=c('AGEP','PWGTP'),catVars=c('SEX'),geoLevel='State',geoSubset=17) {
   
   #init large_tibble
   large_tibble <- tibble()
@@ -698,12 +711,15 @@ queryMultipleYears <- function(years=c(2022),numVars=c('AGEP','PWGTP'),catVars=c
     tibble_query_i['Year'] <- years_i
     
     #add to large tibble
-    bind_rows(large_tibble,tibble_query_i)
+    large_tibble <- bind_rows(large_tibble,tibble_query_i)
     
   }
   
   #format
   large_tibble_formatted <- formatResults(large_tibble)
+  
+  #remove any NA rows which happened due to headers in every query
+  large_tibble_formatted <- filter(large_tibble_formatted,!is.na(large_tibble_formatted[[1]]))
   
   #return
   return(large_tibble_formatted)
@@ -740,12 +756,33 @@ test_results
 Success! Now, let's apply the formatting function to replace categorical enumerated elements, make numeric columns into numberic type, and fix column names.
 
 ```{r}
-test_results_formatted <- formatResults(test_results,year)
+test_results_formatted <- formatResults(test_results)
 test_results_formatted
 ```
 
 Success!
 
+## Validate Multi-Year Query Function
+
+Lastly, let's call the function for multi-year results in a single tibble. Start simple with defaults, first.
+
+```{r}
+multi_test_tibble <- queryMultipleYears(years=c(2021,2022))
+multi_test_tibble
+```
+
+Success! Now, once more with all variables and a third year.
+
+```{r}
+multi_test_tibble_2 <- queryMultipleYears(years=c(2019,2021,2022),
+                                          catVars=c('SEX','HISPEED','FER','HHL','JWTRNS','SCH','SCHL'),
+                                          geoLevel='State',
+                                          geoSubset = 17,
+                                          numVars=c('AGEP','PWGTP','GASP','GRPIP','JWAP','JWDP','JWMNP') )
+multi_test_tibble_2
+```
+
+Success! Wow!
 
 # Note on Person Level Records
 
