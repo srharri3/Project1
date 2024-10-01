@@ -1,3 +1,6 @@
+<<<<<<< HEAD
+
+=======
 ---
 title: "ST 558 | Project 1 | Team N"
 author: Savannah Harrison, Andy Powers
@@ -702,3 +705,86 @@ The Census data returns a form of compressed results, where identical rows repre
 # Summarizing...
 
 Savannah!
+
+Adding additional class of "census" to tibble.
+```{r}
+class(test_results_formatted) <- c("census", class(test_results_formatted))
+```
+
+```{r}
+summary.census <- function(test_results_formatted, numVars = NULL, catVars= NULL) {
+ 
+  if(is.null(numVars)) {
+   numVars <- names(select(test_results_formatted, where(is.numeric), -PWGTP))
+  }
+  
+  if(is.null(catVars)) {
+    catVars <- names(select(test_results_formatted, -where(is.numeric)))
+  }
+  
+  numeric_summary1 <-
+  test_results_formatted |>
+    summarize(across(all_of(numVars),
+                    list(mean = ~ sum(. * PWGTP, na.rm = TRUE) / sum(., na.rm = TRUE)),
+                     .names = "{.col}_mean"))
+              
+  numeric_summary2 <-
+  test_results_formatted |>
+    summarize(across(all_of(numVars),
+       list(sd = ~ sqrt(sum(.^2 * PWGTP, na.rm = TRUE) / (sum(PWGTP, na.rm = TRUE) - (sum(. * PWGTP, na.rm = TRUE) / sum(., na.rm = TRUE))^2))),
+                     .names = "{.col}_sd"))
+
+  cat_count <-
+  test_results_formatted |>
+    drop_na(all_of(catVars)) |> 
+  group_by(across(all_of(catVars))) |>
+          summarize(count = n(), .groups = "drop")
+
+return(list(mean_summary = numeric_summary1, sd_summary = numeric_summary2, categorial_count = cat_count))
+
+}
+```
+
+```{r}
+final_result <- summary.census(test_results_formatted,"AGEP", "SEX")
+```
+
+```{r}
+install.packages("ggplot2")
+```
+
+```{r}
+library(ggplot2)
+```
+
+```{r}
+plot_census <- function(test_results_formatted, numVars, catVars) {
+   if (!(numVars %in% colnames(test_results_formatted))) {
+    stop("Numeric variable does not exist.")
+  }
+  if (!(catVars %in% colnames(test_results_formatted))) {
+    stop("Categorical variable does not exist.")
+  }
+   if(!is.factor(test_results_formatted[[catVars]]) && !is.character(test_results_formatted[[catVars]])) {
+    stop("Variable needs to be categorical.")
+  }
+  if(!is.numeric(test_results_formatted[[numVars]])) {
+    stop("Variable needs to be numeric.")
+  }
+  
+  
+  boxplot_census <- ggplot(test_results_formatted, aes(x = get(catVars), y = get(numVars), weight = PWGTP)) + geom_boxplot() +
+    labs(title = paste("Boxplot of", numVars, "by", catVars),
+         x = catVars,
+         y + numVars) +
+    theme_minimal()
+    
+  print(boxplot_census)
+}
+```
+
+```{r}
+plot_census(test_results_formatted, "AGEP", "SEX")
+```
+
+>>>>>>> origin/main
