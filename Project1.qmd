@@ -760,29 +760,16 @@ library(ggplot2)
 
 Creating the plot for the test_results_formatted tibble.
 ```{r}
-plot_census <- function(test_results_formatted, numVars, catVars) {
+plot.census <- function(test_results_formatted, numeric_variables, cat_variables) {
   
-   if (!(numVars %in% colnames(test_results_formatted))) {
+   if (!(numeric_variables %in% colnames(test_results_formatted))) {
     stop("Numeric variable does not exist.")
   }
-  if (!(catVars %in% colnames(test_results_formatted))) {
+  if (!(cat_variables %in% colnames(test_results_formatted))) {
     stop("Categorical variable does not exist.")
   }
   
- if (!is.factor(test_results_formatted[[catVars]]) && !is.character(test_results_formatted[[catVars]])) {
-   stop("Categorical variable must be either a character or a factor.")
- }
-  if (!is.numeric(test_results_formatted[[numVars]])) {
-    stop("Numeric variable must be numeric.")
-  }
-  
-  test_results_na <- test_results_formatted[!is.na(test_results_formatted[[numVars]]) & !is.na(test_results_formatted[[catVars]]), ]
-  
-  boxplot_census <- ggplot(test_results_formatted, aes(x = get(catVars), y = get(numVars), weight = PWGTP)) + geom_boxplot() +
-    labs(title = paste("Boxplot of", numVars, "by", catVars),
-         x = catVars,
-         y = numVars) +
-    theme_minimal()
+  boxplot_census <- ggplot(data = test_results_formatted, aes(x = get(cat_variables), y = get(numeric_variables), weight = PWGTP)) + geom_boxplot()
     
   return(print(boxplot_census))
 }
@@ -790,7 +777,7 @@ plot_census <- function(test_results_formatted, numVars, catVars) {
 
 Testing the boxplot function.
 ```{r}
-plot_census(test_results_formatted, "AGEP", "SEX")
+plot.census(test_results_formatted, "AGEP", "SEX")
 ```
 
 >>>>>>> origin/main
