@@ -1219,14 +1219,29 @@ library(ggplot2)
 ```
 
 ```{r}
-plot_census <- function(census_tibble, numVars, catVars) {
-  ggplot(test_results_formatted,
-aes(x = get(catVars), y = get(numVars), weight = PWGTP)) + geom_boxplot()
+plot_census <- function(test_results_formatted, numVars, catVars) {
+   if (!(numVars %in% colnames(test_results_formatted))) {
+    stop("Numeric variable does not exist.")
+  }
+  if (!(catVars %in% colnames(test_results_formatted))) {
+    stop("Categorical variable does not exist.")
+  }
+   if(!is.factor(test_results_formatted[[catVars]]) && !is.character(test_results_formatted[[catVars]])) {
+    stop("Variable needs to be categorical.")
+  }
+  if(!is.numeric(test_results_formatted[[numVars]])) {
+    stop("Variable needs to be numeric.")
+  }
+  
+  
+  boxplot_census <- ggplot(test_results_formatted, aes(x = catVars, y = numVars, weight = PWGTP)) + geom_boxplot()
+    
+  print(boxplot_census)
 }
 ```
 
 ```{r}
-plot_census(census_tibble, "AGEP", "FER")
+plot_census(test_results_formatted, "AGEP", "SEX")
 ```
 
 >>>>>>> origin/main
