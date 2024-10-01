@@ -849,24 +849,19 @@ library(ggplot2)
 
 Creating the plot for the test_results_formatted tibble.
 ```{r}
-plot.census <- function(test_results_formatted, numeric_variables, cat_variables) {
-  
-   if (!(numeric_variables %in% colnames(test_results_formatted))) {
-    stop("Numeric variable does not exist.")
-  }
-  if (!(cat_variables %in% colnames(test_results_formatted))) {
-    stop("Categorical variable does not exist.")
-  }
-  
-  boxplot_census <- ggplot(data = test_results_formatted, aes(x = get(cat_variables), y = get(numeric_variables), weight = PWGTP)) + geom_boxplot()
-    
-  return(print(boxplot_census))
+plot.census <- function(test_results_formatted, numVars, catVars) {
+  numVars <- select(test_results_formatted, where(is.numeric), -PWGTP) %>% colnames()
+  categorical_vars <- select(test_results_formatted, where(is.factor) | where(is.character)) %>% colnames()
+
+  ggplot(data = test_results_formatted, mapping = aes(x = get(catVars)), y = get(numVars), weight = "PWGTP") + geom_boxplot()
 }
 ```
 
 Testing the boxplot function.
 ```{r}
-plot.census(test_results_formatted, "AGEP", "SEX")
+plot.census(test_results_formatted,"GASP","SEX")
 ```
+
+Investigating Something Interesting From the Data 
 
 >>>>>>> origin/main
