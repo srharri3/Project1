@@ -835,6 +835,9 @@ Adding additional class of "census" to tibble.
 ```{r}
 class(test_results_formatted) <- c("census", class(test_results_formatted))
 ```
+For the census summary method, we are writing a function that produces means and standard deviations for our numeric variable(s) and counts for our categorical variable(s).
+• This function takes in three arguments: the tibble with class census, the numeric variable(s) to summarize, the categorical variable(s) to summarize.
+• By default, it summarizes all numeric variables (other than PWGTP) and all categorical variables in the tibble. However, the user can specify the variables they’d like as additional arguments.
 
 ```{r}
 summary.census <- function(test_results_formatted, numVars = NULL, catVars= NULL) {
@@ -870,10 +873,13 @@ return(list(mean_summary = numeric_summary1, sd_summary = numeric_summary2, cate
 }
 ```
 
+Testing the function.
 ```{r}
 final_result <- summary.census(test_results_formatted,"AGEP", "SEX")
 ```
 
+Loading in ggplot2 package.
+=======
 ```{r}
 #install.packages("ggplot2")
 ```
@@ -882,32 +888,39 @@ final_result <- summary.census(test_results_formatted,"AGEP", "SEX")
 library(ggplot2)
 ```
 
+Creating the plot for the test_results_formatted tibble.
 ```{r}
-plot_census <- function(test_results_formatted, numVars, catVars) {
-   if (!(numVars %in% colnames(test_results_formatted))) {
-    stop("Numeric variable does not exist.")
+plot.census <- function(test_results_formatted, numVar, catVar) {
+  test_results_formatted <- test_results_formatted |>
+  mutate(across(where(is.character), as.factor))
+  
+  numeric_vars <- names(select(test_results_formatted, where(is.numeric), -PWGTP))
+  categorical_vars <- names(select(test_results_formatted, where(is.factor)))
+
+  cat("Available Numeric Variables:\n")
+  print(numeric_vars) 
+  cat("Available Categorical Variables:\n")
+  print(categorical_vars)
+  
+  if (!(numVar %in% numeric_vars)) {
+    stop("Invalid numeric variable selection. Please choose from available numeric variables.")
   }
-  if (!(catVars %in% colnames(test_results_formatted))) {
-    stop("Categorical variable does not exist.")
-  }
-   if(!is.factor(test_results_formatted[[catVars]]) && !is.character(test_results_formatted[[catVars]])) {
-    stop("Variable needs to be categorical.")
-  }
-  if(!is.numeric(test_results_formatted[[numVars]])) {
-    stop("Variable needs to be numeric.")
+  if (!(catVar %in% categorical_vars)) {
+    stop("Invalid categorical variable selection. Please choose from available categorical variables.")
   }
   
+ censusPlot<- ggplot(data = test_results_formatted, mapping = aes(x = get(catVar), y = get(numVar), weight = "PWGTP")) + geom_boxplot()
   
-  boxplot_census <- ggplot(test_results_formatted, aes(x = get(catVars), y = get(numVars), weight = PWGTP)) + geom_boxplot() +
-    labs(title = paste("Boxplot of", numVars, "by", catVars),
-         x = catVars,
-         y + numVars) +
-    theme_minimal()
-    
-  print(boxplot_census)
+  return(censusPlot)
 }
 ```
 
+Testing the boxplot function.
 ```{r}
-#plot_census(test_results_formatted, "AGEP", "SEX")
+plot.census(test_results_formatted, "AGEP", "HISPEED")
 ```
+<<<<<<< HEAD
+
+Investigating Something Interesting From the Data 
+=======
+>>>>>>> 7e911077b1cf029e1fad1a33c15763f0e33ff0c6
