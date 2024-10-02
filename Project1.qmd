@@ -627,33 +627,30 @@ formatResults <- function(results,year=2022) {
           temp_join <- left_join(temp,lookup,by=join_by(name == name))
         
           #get start and end times
-          ltime <- word(temp_join$value,1)
-          lampm <- word(temp_join$value,2)
-          ltimepm <- if_else(lampm=="p.m.",12,0)
-          rtime <- word(temp_join$value,4)
-          rampm <- word(temp_join$value,5)
-          rtimepm <- if_else(rampm=="p.m.",12,0)
+          #ltime <- word(temp_join$value,1)
+          #lampm <- word(temp_join$value,2)
+          #ltimepm <- if_else(lampm=="p.m.",12,0)
+          #rtime <- word(temp_join$value,4)
+          #rampm <- word(temp_join$value,5)
+          #rtimepm <- if_else(rampm=="p.m.",12,0)
 
           #prepare times in another column
-          temp_join$lhour <- word(ltime,1,sep=":")# + lampm
-          temp_join$lhour <- temp_join$lhour
-          temp_join$lminute <- word(ltime,2,sep=":")
-          temp_join$rhour <- word(rtime,1,sep=":")# + rampm
-          temp_join$rminute <- word(rtime,2,sep=":")
-          temp_join$diffhour <- as_temp_join$rhour-temp_join$lhour
-          temp_join$diffminute <- temp_join$rminute-temp_join$lminute
+          #temp_join$lhour <- word(ltime,1,sep=":")# + lampm
+          #temp_join$lhour <- temp_join$lhour
+          #temp_join$lminute <- word(ltime,2,sep=":")
+          #temp_join$rhour <- word(rtime,1,sep=":")# + rampm
+          #temp_join$rminute <- word(rtime,2,sep=":")
+          #temp_join$diffhour <- as_temp_join$rhour-temp_join$lhour
+          #temp_join$diffminute <- temp_join$rminute-temp_join$lminute
           
           #for only rows where it was a time
           #adjust the format
-          temp_join$value[temp_join$value %in% c("a.m.","p.m.")] <-
-            hms(hours = floor(temp_join$lhour+(temp_join$diffhour/2)),
-                minutes = floor(temp_join$lminute+(temp_join$diffminute/2)))
+          #temp_join$value[temp_join$value %in% c("a.m.","p.m.")] <-
+          #  hms(hours = floor(temp_join$lhour+(temp_join$diffhour/2)),
+          #      minutes = floor(temp_join$lminute+(temp_join$diffminute/2)))
           
           #adjust value
           results[varName]<- temp_join$value
-        ###
-        ###use word(var,1) to get time, word(var,2) to get ampm
-        ###4,5 for the end          
         }
         
 
