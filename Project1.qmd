@@ -925,10 +925,6 @@ Testing the boxplot function.
 plot.census(df = test_results_formatted, numVars = "", catVars ="")
 ```
 
-```{r}
-save(test_results_formatted, file = "DF_dat.RData")
-```
-
 <<<<<<< HEAD
 
 Investigating Something Interesting From the Data 
