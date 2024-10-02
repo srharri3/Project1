@@ -922,7 +922,7 @@ plot.census <- function(df = test_results_formatted, numVars, catVars) {
 
 Testing the boxplot function.
 ```{r}
-plot.census(df = test_results_formatted, numVars = "", catVars ="")
+plot.census(df = test_results_formatted, numVars = "AGEP", catVars ="SEX")
 ```
 
 <<<<<<< HEAD
