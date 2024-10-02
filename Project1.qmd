@@ -794,7 +794,7 @@ test_results <- getToTibble(
 test_results
 ```
 
-Success! Now, let's apply the formatting function to replace categorical enumerated elements, make numeric columns into numberic type, and fix column names.
+Success! Now, let's apply the formatting function to replace categorical enumerated elements, make numeric columns into numeric type, and fix column names.
 
 ```{r}
 test_results_formatted <- formatResults(test_results)
@@ -888,37 +888,47 @@ Loading in ggplot2 package.
 library(ggplot2)
 ```
 
+```{r}
+test_results_formatted <- test_results_formatted |>
+  mutate(across(where(is.character), as.factor))
+```
+
+
 Creating the plot for the test_results_formatted tibble.
 ```{r}
-plot.census <- function(test_results_formatted, numVar, catVar) {
-  test_results_formatted <- test_results_formatted |>
-  mutate(across(where(is.character), as.factor))
-  
+plot.census <- function(df = test_results_formatted, numVars, catVars) {
+   
   numeric_vars <- names(select(test_results_formatted, where(is.numeric), -PWGTP))
   categorical_vars <- names(select(test_results_formatted, where(is.factor)))
-
+  
   cat("Available Numeric Variables:\n")
   print(numeric_vars) 
   cat("Available Categorical Variables:\n")
   print(categorical_vars)
   
-  if (!(numVar %in% numeric_vars)) {
+  if (!(numVars %in% numeric_vars)) {
     stop("Invalid numeric variable selection. Please choose from available numeric variables.")
   }
-  if (!(catVar %in% categorical_vars)) {
+  if (!(catVars %in% categorical_vars)) {
     stop("Invalid categorical variable selection. Please choose from available categorical variables.")
   }
   
- censusPlot<- ggplot(data = test_results_formatted, mapping = aes(x = get(catVar), y = get(numVar), weight = "PWGTP")) + geom_boxplot()
+ censusPlot<- ggplot(data = df, mapping = aes(x = get(catVars), y = get(numVars)), weight = PWGTP) + geom_boxplot()
   
   return(censusPlot)
 }
 ```
 
+
 Testing the boxplot function.
 ```{r}
-plot.census(test_results_formatted, "AGEP", "HISPEED")
+plot.census(df = test_results_formatted, numVars = "", catVars ="")
 ```
+
+```{r}
+save(test_results_formatted, file = "DF_dat.RData")
+```
+
 <<<<<<< HEAD
 
 Investigating Something Interesting From the Data 
