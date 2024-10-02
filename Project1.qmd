@@ -793,8 +793,6 @@ The Census data returns a form of compressed results, where identical rows repre
 
 # Summarizing...
 
-Savannah!
-
 Adding additional class of "census" to tibble.
 ```{r}
 class(test_results_formatted) <- c("census", class(test_results_formatted))
@@ -843,25 +841,45 @@ final_result <- summary.census(test_results_formatted,"AGEP", "SEX")
 ```
 
 Loading in ggplot2 package.
+=======
+```{r}
+#install.packages("ggplot2")
+```
+
 ```{r}
 library(ggplot2)
 ```
 
 Creating the plot for the test_results_formatted tibble.
 ```{r}
-plot.census <- function(test_results_formatted, numVars, catVars) {
-  numVars <- select(test_results_formatted, where(is.numeric), -PWGTP) %>% colnames()
-  categorical_vars <- select(test_results_formatted, where(is.factor) | where(is.character)) %>% colnames()
+plot.census <- function(test_results_formatted, numVar, catVar) {
+  test_results_formatted <- test_results_formatted |>
+  mutate(across(where(is.character), as.factor))
+  
+  numeric_vars <- names(select(test_results_formatted, where(is.numeric), -PWGTP))
+  categorical_vars <- names(select(test_results_formatted, where(is.factor)))
 
-  ggplot(data = test_results_formatted, mapping = aes(x = get(catVars)), y = get(numVars), weight = "PWGTP") + geom_boxplot()
+  cat("Available Numeric Variables:\n")
+  print(numeric_vars) 
+  cat("Available Categorical Variables:\n")
+  print(categorical_vars)
+  
+  if (!(numVar %in% numeric_vars)) {
+    stop("Invalid numeric variable selection. Please choose from available numeric variables.")
+  }
+  if (!(catVar %in% categorical_vars)) {
+    stop("Invalid categorical variable selection. Please choose from available categorical variables.")
+  }
+  
+ censusPlot<- ggplot(data = test_results_formatted, mapping = aes(x = get(catVar), y = get(numVar), weight = "PWGTP")) + geom_boxplot()
+  
+  return(censusPlot)
 }
 ```
 
 Testing the boxplot function.
 ```{r}
-plot.census(test_results_formatted,"GASP","SEX")
+plot.census(test_results_formatted, "AGEP", "HISPEED")
 ```
 
 Investigating Something Interesting From the Data 
-
->>>>>>> origin/main

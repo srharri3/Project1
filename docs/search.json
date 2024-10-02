@@ -4,7 +4,7 @@
     "href": "Project1.html",
     "title": "ST 558 | Project 1 | Team N",
     "section": "",
-    "text": "This project demonstrates the use of R for collecting, processing, and studying US Census data via its API. The data processing functions will allow a variety of fields to be pulled or subset, via their arguments. Data summary functions will auto-summarize and auto-plot the returned data. Lastly, we add commentary and analysis of some points of interest."
+    "text": "&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD\n======="
   },
   {
     "objectID": "Project1.html#api-resources",
