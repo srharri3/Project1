@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-
-=======
 ---
 title: "ST 558 | Project 1 | Team N"
 author: Savannah Harrison, Andy Powers
@@ -873,5 +870,3 @@ plot_census <- function(test_results_formatted, numVars, catVars) {
 ```{r}
 #plot_census(test_results_formatted, "AGEP", "SEX")
 ```
-
->>>>>>> origin/main
