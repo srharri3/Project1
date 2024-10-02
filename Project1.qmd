@@ -116,6 +116,10 @@ library(dplyr)
 library(magrittr)
 library(tidyr)
 library(RSQLite)
+
+#for string manipulations, esp time formatting
+library(stringr)
+library(lubridate)
 ```
 
 ## Sample API Test
@@ -602,17 +606,54 @@ formatResults <- function(results,year=2022) {
       #if a match 
       if (varName == colName) {
         
-        #for a numeric type, swap its contents to numeric
-        if (varName %in% numeric_variables) {
+        #for a numeric OR time type, first swap its contents to numeric
+        if ((varName %in% numeric_variables) | (varName %in% time_variables)) {
           results[varName] <- as.numeric(results[[varName]])
         }
         
-        #for a time type, swap its contents to numeric
-     #   if (varName %in% time_variables) {
-      #    results |> mutate(varName = as.numeric(results[varName]))
-         
-          #revise values 
-#        }
+        #for a time type, parse the lookup results to get start,end
+        #then set to midway as time format
+        if (varName %in% time_variables) {
+          
+          #pull lookup
+          lookup <- getLookup(varName,year)
+          
+          #make lookup 'name' column into a numeric for matching
+          lookup$name <- as.numeric(lookup$name)
+          
+          #make a temp join but only keep the replaced char labels in the result column
+          temp <- results[varName]
+          names(temp) <- 'name'
+          temp_join <- left_join(temp,lookup,by=join_by(name == name))
+        
+          #get start and end times
+          #ltime <- word(temp_join$value,1)
+          #lampm <- word(temp_join$value,2)
+          #ltimepm <- if_else(lampm=="p.m.",12,0)
+          #rtime <- word(temp_join$value,4)
+          #rampm <- word(temp_join$value,5)
+          #rtimepm <- if_else(rampm=="p.m.",12,0)
+
+          #prepare times in another column
+          #temp_join$lhour <- word(ltime,1,sep=":")# + lampm
+          #temp_join$lhour <- temp_join$lhour
+          #temp_join$lminute <- word(ltime,2,sep=":")
+          #temp_join$rhour <- word(rtime,1,sep=":")# + rampm
+          #temp_join$rminute <- word(rtime,2,sep=":")
+          #temp_join$diffhour <- as_temp_join$rhour-temp_join$lhour
+          #temp_join$diffminute <- temp_join$rminute-temp_join$lminute
+          
+          #for only rows where it was a time
+          #adjust the format
+          #temp_join$value[temp_join$value %in% c("a.m.","p.m.")] <-
+          #  hms(hours = floor(temp_join$lhour+(temp_join$diffhour/2)),
+          #      minutes = floor(temp_join$lminute+(temp_join$diffminute/2)))
+          
+          #adjust value
+          results[varName]<- temp_join$value
+        }
+        
+
         
         #for a categ type, swap its contents from index to label 
         if (varName %in% cat_variables) {
