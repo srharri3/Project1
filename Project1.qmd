@@ -466,6 +466,9 @@ queryCensus <- function(year = 2022,
   if (!status) 
     return(NA)
   
+  #ensure numVars includes 'PWGTP' required variable
+  if ( !('PWGTP' %in% numVars) ) { numVars <- c(numVars,'PWGTP') }
+  
   #otherwise, proceed and combine strings appropriately for query parameters
 
   #combine numeric and categorical vars for the get parameter

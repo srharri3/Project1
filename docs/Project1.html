@@ -1152,6 +1152,7 @@ Warning in formatResults(large_tibble): NAs introduced by coercion</code></pre>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb49"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a><span class="fu">class</span>(test_results_formatted) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"census"</span>, <span class="fu">class</span>(test_results_formatted))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
+<p>For the census summary method, we are writing a function that produces means and standard deviations for our numeric variable(s) and counts for our categorical variable(s). • This function takes in three arguments: the tibble with class census, the numeric variable(s) to summarize, the categorical variable(s) to summarize. • By default, it summarizes all numeric variables (other than PWGTP) and all categorical variables in the tibble. However, the user can specify the variables they’d like as additional arguments.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb50"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a>summary.census <span class="ot">&lt;-</span> <span class="cf">function</span>(test_results_formatted, <span class="at">numVars =</span> <span class="cn">NULL</span>, <span class="at">catVars=</span> <span class="cn">NULL</span>) {</span>
 <span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a> </span>
@@ -1185,43 +1186,87 @@ Warning in formatResults(large_tibble): NAs introduced by coercion</code></pre>
 <span id="cb50-30"><a href="#cb50-30" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb50-31"><a href="#cb50-31" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
+<p>Testing the function.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb51"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a>final_result <span class="ot">&lt;-</span> <span class="fu">summary.census</span>(test_results_formatted,<span class="st">"AGEP"</span>, <span class="st">"SEX"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
+</section>
+<section id="loading-in-ggplot2-package." class="level1">
+<h1>Loading in ggplot2 package.</h1>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb52"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a><span class="co">#install.packages("ggplot2")</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb53"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
+<p>Creating the plot for the test_results_formatted tibble.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb54"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a>plot_census <span class="ot">&lt;-</span> <span class="cf">function</span>(test_results_formatted, numVars, catVars) {</span>
-<span id="cb54-2"><a href="#cb54-2" aria-hidden="true" tabindex="-1"></a>   <span class="cf">if</span> (<span class="sc">!</span>(numVars <span class="sc">%in%</span> <span class="fu">colnames</span>(test_results_formatted))) {</span>
-<span id="cb54-3"><a href="#cb54-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">stop</span>(<span class="st">"Numeric variable does not exist."</span>)</span>
-<span id="cb54-4"><a href="#cb54-4" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb54-5"><a href="#cb54-5" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span>(catVars <span class="sc">%in%</span> <span class="fu">colnames</span>(test_results_formatted))) {</span>
-<span id="cb54-6"><a href="#cb54-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">stop</span>(<span class="st">"Categorical variable does not exist."</span>)</span>
-<span id="cb54-7"><a href="#cb54-7" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb54-8"><a href="#cb54-8" aria-hidden="true" tabindex="-1"></a>   <span class="cf">if</span>(<span class="sc">!</span><span class="fu">is.factor</span>(test_results_formatted[[catVars]]) <span class="sc">&amp;&amp;</span> <span class="sc">!</span><span class="fu">is.character</span>(test_results_formatted[[catVars]])) {</span>
-<span id="cb54-9"><a href="#cb54-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">stop</span>(<span class="st">"Variable needs to be categorical."</span>)</span>
-<span id="cb54-10"><a href="#cb54-10" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb54-11"><a href="#cb54-11" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="sc">!</span><span class="fu">is.numeric</span>(test_results_formatted[[numVars]])) {</span>
-<span id="cb54-12"><a href="#cb54-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">stop</span>(<span class="st">"Variable needs to be numeric."</span>)</span>
-<span id="cb54-13"><a href="#cb54-13" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb54-14"><a href="#cb54-14" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb54-15"><a href="#cb54-15" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb54-16"><a href="#cb54-16" aria-hidden="true" tabindex="-1"></a>  boxplot_census <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(test_results_formatted, <span class="fu">aes</span>(<span class="at">x =</span> <span class="fu">get</span>(catVars), <span class="at">y =</span> <span class="fu">get</span>(numVars), <span class="at">weight =</span> PWGTP)) <span class="sc">+</span> <span class="fu">geom_boxplot</span>() <span class="sc">+</span></span>
-<span id="cb54-17"><a href="#cb54-17" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(<span class="at">title =</span> <span class="fu">paste</span>(<span class="st">"Boxplot of"</span>, numVars, <span class="st">"by"</span>, catVars),</span>
-<span id="cb54-18"><a href="#cb54-18" aria-hidden="true" tabindex="-1"></a>         <span class="at">x =</span> catVars,</span>
-<span id="cb54-19"><a href="#cb54-19" aria-hidden="true" tabindex="-1"></a>         y <span class="sc">+</span> numVars) <span class="sc">+</span></span>
-<span id="cb54-20"><a href="#cb54-20" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_minimal</span>()</span>
-<span id="cb54-21"><a href="#cb54-21" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb54-22"><a href="#cb54-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(boxplot_census)</span>
+<div class="sourceCode cell-code" id="cb54"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a>plot.census <span class="ot">&lt;-</span> <span class="cf">function</span>(test_results_formatted, numVar, catVar) {</span>
+<span id="cb54-2"><a href="#cb54-2" aria-hidden="true" tabindex="-1"></a>  test_results_formatted <span class="ot">&lt;-</span> test_results_formatted <span class="sc">|&gt;</span></span>
+<span id="cb54-3"><a href="#cb54-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.character), as.factor))</span>
+<span id="cb54-4"><a href="#cb54-4" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb54-5"><a href="#cb54-5" aria-hidden="true" tabindex="-1"></a>  numeric_vars <span class="ot">&lt;-</span> <span class="fu">names</span>(<span class="fu">select</span>(test_results_formatted, <span class="fu">where</span>(is.numeric), <span class="sc">-</span>PWGTP))</span>
+<span id="cb54-6"><a href="#cb54-6" aria-hidden="true" tabindex="-1"></a>  categorical_vars <span class="ot">&lt;-</span> <span class="fu">names</span>(<span class="fu">select</span>(test_results_formatted, <span class="fu">where</span>(is.factor)))</span>
+<span id="cb54-7"><a href="#cb54-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb54-8"><a href="#cb54-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"Available Numeric Variables:</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb54-9"><a href="#cb54-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(numeric_vars) </span>
+<span id="cb54-10"><a href="#cb54-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"Available Categorical Variables:</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb54-11"><a href="#cb54-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(categorical_vars)</span>
+<span id="cb54-12"><a href="#cb54-12" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb54-13"><a href="#cb54-13" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span>(numVar <span class="sc">%in%</span> numeric_vars)) {</span>
+<span id="cb54-14"><a href="#cb54-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">stop</span>(<span class="st">"Invalid numeric variable selection. Please choose from available numeric variables."</span>)</span>
+<span id="cb54-15"><a href="#cb54-15" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb54-16"><a href="#cb54-16" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span>(catVar <span class="sc">%in%</span> categorical_vars)) {</span>
+<span id="cb54-17"><a href="#cb54-17" aria-hidden="true" tabindex="-1"></a>    <span class="fu">stop</span>(<span class="st">"Invalid categorical variable selection. Please choose from available categorical variables."</span>)</span>
+<span id="cb54-18"><a href="#cb54-18" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb54-19"><a href="#cb54-19" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb54-20"><a href="#cb54-20" aria-hidden="true" tabindex="-1"></a> censusPlot<span class="ot">&lt;-</span> <span class="fu">ggplot</span>(<span class="at">data =</span> test_results_formatted, <span class="at">mapping =</span> <span class="fu">aes</span>(<span class="at">x =</span> <span class="fu">get</span>(catVar), <span class="at">y =</span> <span class="fu">get</span>(numVar), <span class="at">weight =</span> <span class="st">"PWGTP"</span>)) <span class="sc">+</span> <span class="fu">geom_boxplot</span>()</span>
+<span id="cb54-21"><a href="#cb54-21" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb54-22"><a href="#cb54-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(censusPlot)</span>
 <span id="cb54-23"><a href="#cb54-23" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
+<p>Testing the boxplot function.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb55"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a><span class="co">#plot_census(test_results_formatted, "AGEP", "SEX")</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb55"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot.census</span>(test_results_formatted, <span class="st">"AGEP"</span>, <span class="st">"HISPEED"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Available Numeric Variables:
+[1] "AGEP"  "GASP"  "GRPIP" "JWMNP"
+Available Categorical Variables:
+ [1] "JWAP"    "JWDP"    "SEX"     "HISPEED" "FER"     "HHL"     "JWTRNS" 
+ [8] "SCH"     "SCHL"    "state"  </code></pre>
 </div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Computation failed in `stat_boxplot()`.
+Caused by error in `loadNamespace()`:
+! there is no package called 'quantreg'</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Project1_files/figure-html/unnamed-chunk-24-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</p>
+</section>
+<section id="investigating-something-interesting-from-the-data" class="level1">
+<h1>Investigating Something Interesting From the Data</h1>
+<blockquote class="blockquote">
+<blockquote class="blockquote">
+<blockquote class="blockquote">
+<blockquote class="blockquote">
+<blockquote class="blockquote">
+<blockquote class="blockquote">
+<blockquote class="blockquote">
+<p>7e911077b1cf029e1fad1a33c15763f0e33ff0c6</p>
+</blockquote>
+</blockquote>
+</blockquote>
+</blockquote>
+</blockquote>
+</blockquote>
+</blockquote>
 
 
 </section>
