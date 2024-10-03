@@ -797,7 +797,7 @@ test_results <- getToTibble(
 test_results
 ```
 
-Success! Now, let's apply the formatting function to replace categorical enumerated elements, make numeric columns into numberic type, and fix column names.
+Success! Now, let's apply the formatting function to replace categorical enumerated elements, make numeric columns into numeric type, and fix column names.
 
 ```{r}
 test_results_formatted <- formatResults(test_results)
@@ -842,88 +842,101 @@ For the census summary method, we are writing a function that produces means and
 • This function takes in three arguments: the tibble with class census, the numeric variable(s) to summarize, the categorical variable(s) to summarize.
 • By default, it summarizes all numeric variables (other than PWGTP) and all categorical variables in the tibble. However, the user can specify the variables they’d like as additional arguments.
 
+## Creating Summary Function
 ```{r}
+#Creating summary function, setting default to NULL so it will take in all variables
 summary.census <- function(test_results_formatted, numVars = NULL, catVars= NULL) {
- 
+#Pulling the numeric variables from the test_results_formatted tibble, without including PWGTP
   if(is.null(numVars)) {
    numVars <- names(select(test_results_formatted, where(is.numeric), -PWGTP))
   }
-  
+#Pulling the categorical variables from the test_results_formatted tibble
   if(is.null(catVars)) {
     catVars <- names(select(test_results_formatted, -where(is.numeric)))
   }
   
+#Calculating the sample mean for the numeric variables
   numeric_summary1 <-
   test_results_formatted |>
     summarize(across(all_of(numVars),
                     list(mean = ~ sum(. * PWGTP, na.rm = TRUE) / sum(., na.rm = TRUE)),
                      .names = "{.col}_mean"))
-              
+      
+#Calculating the standard deviation for the numeric variables        
   numeric_summary2 <-
   test_results_formatted |>
     summarize(across(all_of(numVars),
        list(sd = ~ sqrt(sum(.^2 * PWGTP, na.rm = TRUE) / (sum(PWGTP, na.rm = TRUE) - (sum(. * PWGTP, na.rm = TRUE) / sum(., na.rm = TRUE))^2))),
                      .names = "{.col}_sd"))
-
+#Counting the categorical variables
   cat_count <-
   test_results_formatted |>
     drop_na(all_of(catVars)) |> 
   group_by(across(all_of(catVars))) |>
           summarize(count = n(), .groups = "drop")
 
+#Returning values from the function as a list
 return(list(mean_summary = numeric_summary1, sd_summary = numeric_summary2, categorial_count = cat_count))
 
 }
 ```
 
-Testing the function.
+Testing the summary function.
 ```{r}
 final_result <- summary.census(test_results_formatted,"AGEP", "SEX")
 ```
 
-Loading in ggplot2 package.
-=======
-```{r}
-#install.packages("ggplot2")
-```
+## Creating boxplot function
 
+Loading in ggplot2 package
 ```{r}
 library(ggplot2)
 ```
 
-Creating the plot for the test_results_formatted tibble.
+Coercing character values to be factors for the boxplot.
 ```{r}
-plot.census <- function(test_results_formatted, numVar, catVar) {
-  test_results_formatted <- test_results_formatted |>
+test_results_formatted <- test_results_formatted |>
   mutate(across(where(is.character), as.factor))
-  
+```
+
+Creating the boxplot function for the test_results_formatted tibble
+```{r}
+plot.census <- function(df = test_results_formatted, numVars, catVars) {
+   
+  #Pulling the numeric and categorical variables from the test_results_formatted tibble
   numeric_vars <- names(select(test_results_formatted, where(is.numeric), -PWGTP))
   categorical_vars <- names(select(test_results_formatted, where(is.factor)))
-
+  
+  #Printing the options for the variables
   cat("Available Numeric Variables:\n")
   print(numeric_vars) 
   cat("Available Categorical Variables:\n")
   print(categorical_vars)
   
-  if (!(numVar %in% numeric_vars)) {
+  #Checking to make sure the user put in valid variables names
+  if (!(numVars %in% numeric_vars)) {
     stop("Invalid numeric variable selection. Please choose from available numeric variables.")
   }
-  if (!(catVar %in% categorical_vars)) {
+  if (!(catVars %in% categorical_vars)) {
     stop("Invalid categorical variable selection. Please choose from available categorical variables.")
   }
   
- censusPlot<- ggplot(data = test_results_formatted, mapping = aes(x = get(catVar), y = get(numVar), weight = "PWGTP")) + geom_boxplot()
+  #Creating the boxplot using ggplot
+ censusPlot<- ggplot(data = df, mapping = aes(x = get(catVars), y = get(numVars)), weight = PWGTP) + geom_boxplot()
   
   return(censusPlot)
 }
 ```
 
+
 Testing the boxplot function.
 ```{r}
-plot.census(test_results_formatted, "AGEP", "HISPEED")
+plot.census(df = test_results_formatted, numVars = "AGEP", catVars ="SEX")
 ```
+
 <<<<<<< HEAD
 
-Investigating Something Interesting From the Data 
+Data Investigation
+
 =======
 >>>>>>> 7e911077b1cf029e1fad1a33c15763f0e33ff0c6
