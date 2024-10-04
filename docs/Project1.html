@@ -1150,7 +1150,7 @@ Warning in formatResults(large_tibble): NAs introduced by coercion</code></pre>
 <p>The Census data returns a form of compressed results, where identical rows representing multiple people are condensed to one row with the field <code>PWGTP</code> representing the number of observations (people) associated with that row. We will not replicate these rows to keep our table smaller and simpler, but it must be considered for data summarization to ensure proper proportions/weights are incorporated.</p>
 </section>
 <section id="summarizing" class="level1">
-<h1>Summarizing…</h1>
+<h1>Summarizing</h1>
 <p>Adding additional class of “census” to tibble.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb49"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a><span class="fu">class</span>(test_results_formatted) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"census"</span>, <span class="fu">class</span>(test_results_formatted))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -1174,14 +1174,14 @@ Warning in formatResults(large_tibble): NAs introduced by coercion</code></pre>
 <span id="cb50-13"><a href="#cb50-13" aria-hidden="true" tabindex="-1"></a>  numeric_summary1 <span class="ot">&lt;-</span></span>
 <span id="cb50-14"><a href="#cb50-14" aria-hidden="true" tabindex="-1"></a>  test_results_formatted <span class="sc">|&gt;</span></span>
 <span id="cb50-15"><a href="#cb50-15" aria-hidden="true" tabindex="-1"></a>    <span class="fu">summarize</span>(<span class="fu">across</span>(<span class="fu">all_of</span>(numVars),</span>
-<span id="cb50-16"><a href="#cb50-16" aria-hidden="true" tabindex="-1"></a>                    <span class="fu">list</span>(<span class="at">mean =</span> <span class="sc">~</span> <span class="fu">sum</span>(. <span class="sc">*</span> PWGTP, <span class="at">na.rm =</span> <span class="cn">TRUE</span>) <span class="sc">/</span> <span class="fu">sum</span>(., <span class="at">na.rm =</span> <span class="cn">TRUE</span>)),</span>
+<span id="cb50-16"><a href="#cb50-16" aria-hidden="true" tabindex="-1"></a>                    <span class="fu">list</span>(<span class="at">mean =</span> <span class="sc">~</span> <span class="fu">sum</span>(. <span class="sc">*</span> PWGTP, <span class="at">na.rm =</span> <span class="cn">TRUE</span>) <span class="sc">/</span> <span class="fu">sum</span>(PWGTP, <span class="at">na.rm =</span><span class="cn">TRUE</span>)),</span>
 <span id="cb50-17"><a href="#cb50-17" aria-hidden="true" tabindex="-1"></a>                     <span class="at">.names =</span> <span class="st">"{.col}_mean"</span>))</span>
 <span id="cb50-18"><a href="#cb50-18" aria-hidden="true" tabindex="-1"></a>      </span>
 <span id="cb50-19"><a href="#cb50-19" aria-hidden="true" tabindex="-1"></a><span class="co">#Calculating the standard deviation for the numeric variables        </span></span>
 <span id="cb50-20"><a href="#cb50-20" aria-hidden="true" tabindex="-1"></a>  numeric_summary2 <span class="ot">&lt;-</span></span>
 <span id="cb50-21"><a href="#cb50-21" aria-hidden="true" tabindex="-1"></a>  test_results_formatted <span class="sc">|&gt;</span></span>
 <span id="cb50-22"><a href="#cb50-22" aria-hidden="true" tabindex="-1"></a>    <span class="fu">summarize</span>(<span class="fu">across</span>(<span class="fu">all_of</span>(numVars),</span>
-<span id="cb50-23"><a href="#cb50-23" aria-hidden="true" tabindex="-1"></a>       <span class="fu">list</span>(<span class="at">sd =</span> <span class="sc">~</span> <span class="fu">sqrt</span>(<span class="fu">sum</span>(.<span class="sc">^</span><span class="dv">2</span> <span class="sc">*</span> PWGTP, <span class="at">na.rm =</span> <span class="cn">TRUE</span>) <span class="sc">/</span> (<span class="fu">sum</span>(PWGTP, <span class="at">na.rm =</span> <span class="cn">TRUE</span>) <span class="sc">-</span> (<span class="fu">sum</span>(. <span class="sc">*</span> PWGTP, <span class="at">na.rm =</span> <span class="cn">TRUE</span>) <span class="sc">/</span> <span class="fu">sum</span>(., <span class="at">na.rm =</span> <span class="cn">TRUE</span>))<span class="sc">^</span><span class="dv">2</span>))),</span>
+<span id="cb50-23"><a href="#cb50-23" aria-hidden="true" tabindex="-1"></a>       <span class="fu">list</span>(<span class="at">sd =</span> <span class="sc">~</span> <span class="fu">sqrt</span>(<span class="fu">sum</span>(.<span class="sc">^</span><span class="dv">2</span> <span class="sc">*</span> PWGTP, <span class="at">na.rm =</span> <span class="cn">TRUE</span>) <span class="sc">/</span> (<span class="fu">sum</span>(PWGTP, <span class="at">na.rm =</span> <span class="cn">TRUE</span>) <span class="sc">-</span> (<span class="fu">sum</span>(. <span class="sc">*</span> PWGTP, <span class="at">na.rm =</span> <span class="cn">TRUE</span>) <span class="sc">/</span> <span class="fu">sum</span>(PWGTP, <span class="at">na.rm =</span> <span class="cn">TRUE</span>))<span class="sc">^</span><span class="dv">2</span>))),</span>
 <span id="cb50-24"><a href="#cb50-24" aria-hidden="true" tabindex="-1"></a>                     <span class="at">.names =</span> <span class="st">"{.col}_sd"</span>))</span>
 <span id="cb50-25"><a href="#cb50-25" aria-hidden="true" tabindex="-1"></a><span class="co">#Counting the categorical variables</span></span>
 <span id="cb50-26"><a href="#cb50-26" aria-hidden="true" tabindex="-1"></a>  cat_count <span class="ot">&lt;-</span></span>
@@ -1197,7 +1197,7 @@ Warning in formatResults(large_tibble): NAs introduced by coercion</code></pre>
 </div>
 <p>Testing the summary function.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb51"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a>final_result <span class="ot">&lt;-</span> <span class="fu">summary.census</span>(test_results_formatted,<span class="st">"AGEP"</span>, <span class="st">"SEX"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb51"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a>summary_result <span class="ot">&lt;-</span> <span class="fu">summary.census</span>(test_results_formatted,<span class="st">"JWMNP"</span>, <span class="st">"SEX"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="creating-boxplot-function" class="level2">
@@ -1241,7 +1241,7 @@ Warning in formatResults(large_tibble): NAs introduced by coercion</code></pre>
 </div>
 <p>Testing the boxplot function.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb55"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot.census</span>(<span class="at">df =</span> test_results_formatted, <span class="at">numVars =</span> <span class="st">"AGEP"</span>, <span class="at">catVars =</span><span class="st">"SEX"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb55"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot.census</span>(<span class="at">df =</span> test_results_formatted, <span class="at">numVars =</span> <span class="st">"JWMNP"</span>, <span class="at">catVars =</span><span class="st">"SEX"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Available Numeric Variables:
 [1] "AGEP"  "GASP"  "GRPIP" "JWMNP"
@@ -1257,12 +1257,13 @@ Available Categorical Variables:
 </div>
 </div>
 </div>
-<p>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</p>
-<p>Data Investigation</p>
-<p>======= &gt;&gt;&gt;&gt;&gt;&gt;&gt; 7e911077b1cf029e1fad1a33c15763f0e33ff0c6</p>
-
-
 </section>
+</section>
+<section id="data-investigation" class="level1">
+<h1>Data Investigation</h1>
+<p>While comparing different sexes (SEX) and their travel time to work (JWMNP), there are notable differences between the two categories. There is a larger variation in the male data as indicated by the larger box size, which could be caused by a wider range of distances for work, or by different types of transportation taken to work. There are more outliers for the female data, which means that there are more women who experience longer commute times compared to the mean. The sample mean travel time to work was 11.6, which is relatively low. This is reflected in the boxplot, since the majority of the data are close to 0. The standard deviation of the sample was 23.1. This number is closely represented by the male boxplot, however, the female boxplot seems to have a smaller standard deviation. Based on the boxplots, males tend to have longer travel times to work. It is interesting to think about why this is the case. The differences could be due to a multitude of reasons including transportation type, career differences, or living in different residential areas.</p>
+
+
 </section>
 
 </main> <!-- /main -->
