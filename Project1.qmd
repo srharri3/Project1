@@ -883,7 +883,8 @@ return(list(mean_summary = numeric_summary1, sd_summary = numeric_summary2, cate
 
 Testing the summary function.
 ```{r}
-summary_result <- summary.census(test_results_formatted,"JWMNP", "SEX")
+summary_result <- summary(test_results_formatted, "JWMNP","SEX")
+summary_result
 ```
 
 ## Creating boxplot function
@@ -893,19 +894,13 @@ Loading in ggplot2 package
 library(ggplot2)
 ```
 
-Coercing character values to be factors for the boxplot.
-```{r}
-test_results_formatted <- test_results_formatted |>
-  mutate(across(where(is.character), as.factor))
-```
-
 Creating the boxplot function for the test_results_formatted tibble
 ```{r}
 plot.census <- function(df = test_results_formatted, numVars, catVars) {
    
   #Pulling the numeric and categorical variables from the test_results_formatted tibble
   numeric_vars <- names(select(test_results_formatted, where(is.numeric), -PWGTP))
-  categorical_vars <- names(select(test_results_formatted, where(is.factor)))
+  categorical_vars <- names(select(test_results_formatted, -where(is.numeric)))
   
   #Printing the options for the variables
   cat("Available Numeric Variables:\n")
@@ -922,16 +917,17 @@ plot.census <- function(df = test_results_formatted, numVars, catVars) {
   }
   
   #Creating the boxplot using ggplot
- censusPlot<- ggplot(data = df, mapping = aes(x = get(catVars), y = get(numVars)), weight = PWGTP) + geom_boxplot()
+ censusPlot<- ggplot(data = df, mapping = aes(x = get(catVars), y = get(numVars)), weight = PWGTP) + geom_boxplot()+ 
+   labs(x = catVars, y = numVars)
   
-  return(censusPlot)
+  return(print(censusPlot))
 }
 ```
 
 
 Testing the boxplot function.
 ```{r}
-plot.census(df = test_results_formatted, numVars = "JWMNP", catVars ="SEX")
+plot_census <- plot(df = test_results_formatted, numVars = "JWMNP", catVars = "SEX")
 ```
 
 # Data Investigation

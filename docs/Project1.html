@@ -1197,19 +1197,35 @@ Warning in formatResults(large_tibble): NAs introduced by coercion</code></pre>
 </div>
 <p>Testing the summary function.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb51"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a>summary_result <span class="ot">&lt;-</span> <span class="fu">summary.census</span>(test_results_formatted,<span class="st">"JWMNP"</span>, <span class="st">"SEX"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb51"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a>summary_result <span class="ot">&lt;-</span> <span class="fu">summary</span>(test_results_formatted, <span class="st">"JWMNP"</span>,<span class="st">"SEX"</span>)</span>
+<span id="cb51-2"><a href="#cb51-2" aria-hidden="true" tabindex="-1"></a>summary_result</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>$mean_summary
+# A tibble: 1 × 1
+  JWMNP_mean
+       &lt;dbl&gt;
+1       11.6
+
+$sd_summary
+# A tibble: 1 × 1
+  JWMNP_sd
+     &lt;dbl&gt;
+1     23.1
+
+$categorial_count
+# A tibble: 2 × 2
+  SEX    count
+  &lt;chr&gt;  &lt;int&gt;
+1 Female 65326
+2 Male   62720</code></pre>
+</div>
 </div>
 </section>
 <section id="creating-boxplot-function" class="level2">
 <h2 class="anchored" data-anchor-id="creating-boxplot-function">Creating boxplot function</h2>
 <p>Loading in ggplot2 package</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb52"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<p>Coercing character values to be factors for the boxplot.</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb53"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a>test_results_formatted <span class="ot">&lt;-</span> test_results_formatted <span class="sc">|&gt;</span></span>
-<span id="cb53-2"><a href="#cb53-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.character), as.factor))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb53"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Creating the boxplot function for the test_results_formatted tibble</p>
 <div class="cell">
@@ -1217,7 +1233,7 @@ Warning in formatResults(large_tibble): NAs introduced by coercion</code></pre>
 <span id="cb54-2"><a href="#cb54-2" aria-hidden="true" tabindex="-1"></a>   </span>
 <span id="cb54-3"><a href="#cb54-3" aria-hidden="true" tabindex="-1"></a>  <span class="co">#Pulling the numeric and categorical variables from the test_results_formatted tibble</span></span>
 <span id="cb54-4"><a href="#cb54-4" aria-hidden="true" tabindex="-1"></a>  numeric_vars <span class="ot">&lt;-</span> <span class="fu">names</span>(<span class="fu">select</span>(test_results_formatted, <span class="fu">where</span>(is.numeric), <span class="sc">-</span>PWGTP))</span>
-<span id="cb54-5"><a href="#cb54-5" aria-hidden="true" tabindex="-1"></a>  categorical_vars <span class="ot">&lt;-</span> <span class="fu">names</span>(<span class="fu">select</span>(test_results_formatted, <span class="fu">where</span>(is.factor)))</span>
+<span id="cb54-5"><a href="#cb54-5" aria-hidden="true" tabindex="-1"></a>  categorical_vars <span class="ot">&lt;-</span> <span class="fu">names</span>(<span class="fu">select</span>(test_results_formatted, <span class="sc">-</span><span class="fu">where</span>(is.numeric)))</span>
 <span id="cb54-6"><a href="#cb54-6" aria-hidden="true" tabindex="-1"></a>  </span>
 <span id="cb54-7"><a href="#cb54-7" aria-hidden="true" tabindex="-1"></a>  <span class="co">#Printing the options for the variables</span></span>
 <span id="cb54-8"><a href="#cb54-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"Available Numeric Variables:</span><span class="sc">\n</span><span class="st">"</span>)</span>
@@ -1234,14 +1250,15 @@ Warning in formatResults(large_tibble): NAs introduced by coercion</code></pre>
 <span id="cb54-19"><a href="#cb54-19" aria-hidden="true" tabindex="-1"></a>  }</span>
 <span id="cb54-20"><a href="#cb54-20" aria-hidden="true" tabindex="-1"></a>  </span>
 <span id="cb54-21"><a href="#cb54-21" aria-hidden="true" tabindex="-1"></a>  <span class="co">#Creating the boxplot using ggplot</span></span>
-<span id="cb54-22"><a href="#cb54-22" aria-hidden="true" tabindex="-1"></a> censusPlot<span class="ot">&lt;-</span> <span class="fu">ggplot</span>(<span class="at">data =</span> df, <span class="at">mapping =</span> <span class="fu">aes</span>(<span class="at">x =</span> <span class="fu">get</span>(catVars), <span class="at">y =</span> <span class="fu">get</span>(numVars)), <span class="at">weight =</span> PWGTP) <span class="sc">+</span> <span class="fu">geom_boxplot</span>()</span>
-<span id="cb54-23"><a href="#cb54-23" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb54-24"><a href="#cb54-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(censusPlot)</span>
-<span id="cb54-25"><a href="#cb54-25" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb54-22"><a href="#cb54-22" aria-hidden="true" tabindex="-1"></a> censusPlot<span class="ot">&lt;-</span> <span class="fu">ggplot</span>(<span class="at">data =</span> df, <span class="at">mapping =</span> <span class="fu">aes</span>(<span class="at">x =</span> <span class="fu">get</span>(catVars), <span class="at">y =</span> <span class="fu">get</span>(numVars)), <span class="at">weight =</span> PWGTP) <span class="sc">+</span> <span class="fu">geom_boxplot</span>()<span class="sc">+</span> </span>
+<span id="cb54-23"><a href="#cb54-23" aria-hidden="true" tabindex="-1"></a>   <span class="fu">labs</span>(<span class="at">x =</span> catVars, <span class="at">y =</span> numVars)</span>
+<span id="cb54-24"><a href="#cb54-24" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb54-25"><a href="#cb54-25" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(<span class="fu">print</span>(censusPlot))</span>
+<span id="cb54-26"><a href="#cb54-26" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Testing the boxplot function.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb55"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot.census</span>(<span class="at">df =</span> test_results_formatted, <span class="at">numVars =</span> <span class="st">"JWMNP"</span>, <span class="at">catVars =</span><span class="st">"SEX"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb55"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a>plot_census <span class="ot">&lt;-</span> <span class="fu">plot</span>(<span class="at">df =</span> test_results_formatted, <span class="at">numVars =</span> <span class="st">"JWMNP"</span>, <span class="at">catVars =</span> <span class="st">"SEX"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Available Numeric Variables:
 [1] "AGEP"  "GASP"  "GRPIP" "JWMNP"
@@ -1252,7 +1269,7 @@ Available Categorical Variables:
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="Project1_files/figure-html/unnamed-chunk-24-1.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="Project1_files/figure-html/unnamed-chunk-23-1.png" class="img-fluid figure-img" width="672"></p>
 </figure>
 </div>
 </div>
