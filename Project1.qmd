@@ -120,6 +120,7 @@ library(RSQLite)
 #for string manipulations, esp time formatting
 library(stringr)
 library(lubridate)
+library(stringi)
 ```
 
 ## Sample API Test
@@ -527,6 +528,8 @@ We need to adjust numeric fields from char to num/time and replace enumerated ca
 
 We need to transform each column according to its type and lookup values. Also, we take the header names from row 1 into the column labels, removing row 1.
 
+If I were to rebuild this formatting function, I'd consider splitting it up for cleaner, modular usage. Since I built it over time and never revised it, it is currently functional but a bit messy and large for its purpose.
+
 ```{r}
 # function:
 #   formatResults(results,year=2022)
@@ -553,7 +556,7 @@ formatResults <- function(results,year=2022) {
     year_on <- FALSE
   
   #update the column names from row1
-  names(results) <- results[1,]
+  names(results) <- as.vector(results[1,])
   
   #fix year if needed
   if (year_on) attributes(results)$names[length(results)] <- 'Year'
@@ -625,38 +628,58 @@ formatResults <- function(results,year=2022) {
           lookup$name <- as.numeric(lookup$name)
           
           #make a temp join but only keep the replaced char labels in the result column
-          temp <- results[varName]
+          temp <- as_tibble(results[varName]) ###edit here
           names(temp) <- 'name'
           temp_join <- left_join(temp,lookup,by=join_by(name == name))
         
-          #get start and end times
-          #ltime <- word(temp_join$value,1)
-          #lampm <- word(temp_join$value,2)
-          #ltimepm <- if_else(lampm=="p.m.",12,0)
-          #rtime <- word(temp_join$value,4)
-          #rampm <- word(temp_join$value,5)
-          #rtimepm <- if_else(rampm=="p.m.",12,0)
+          temp_join$value_new=0
 
-          #prepare times in another column
-          #temp_join$lhour <- word(ltime,1,sep=":")# + lampm
-          #temp_join$lhour <- temp_join$lhour
-          #temp_join$lminute <- word(ltime,2,sep=":")
-          #temp_join$rhour <- word(rtime,1,sep=":")# + rampm
-          #temp_join$rminute <- word(rtime,2,sep=":")
-          #temp_join$diffhour <- as_temp_join$rhour-temp_join$lhour
-          #temp_join$diffminute <- temp_join$rminute-temp_join$lminute
+          #new temp tibble, vector-string manipulating to get the times, half the difference
+          #and then add that to the left time for display as char string. Also must keep
+          #NA value for items not time-based
+          tt <- temp_join
+          tt$ltime <- word(tt$value,1)
+          tt$lampm <- word(tt$value,2)
           
-          #for only rows where it was a time
-          #adjust the format
-          #temp_join$value[temp_join$value %in% c("a.m.","p.m.")] <-
-          #  hms(hours = floor(temp_join$lhour+(temp_join$diffhour/2)),
-          #      minutes = floor(temp_join$lminute+(temp_join$diffminute/2)))
+          tt$rtime <- word(tt$value,4)
+          tt$rampm <- word(tt$value,5)
+          
+          tt$lhour <- as.numeric(word(tt$ltime,1,sep=":"))
+          tt$lminute <- as.numeric(word(tt$ltime,2,sep=":"))
+          tt$rhour <- as.numeric(word(tt$rtime,1,sep=":"))
+          tt$rminute <- as.numeric(word(tt$rtime,2,sep=":"))
+          
+          tt$diffhour <- tt$rhour-tt$lhour
+          tt$diffminute <- tt$rminute-tt$lminute
+          tt <- mutate(tt,
+                       "newhour"=lhour+floor(diffhour/2),
+                       "newminute"=lminute+floor(diffminute/2)
+                       )
+          
+          tt$lowfloor <- case_when(
+            tt$newminute<10 ~ "0",
+            .default = "")
+          
+          tt$final <- case_when(
+            word(tt$value,1) == "N/A" ~ tt$value,
+            .default = {
+              stri_paste(tt$newhour,
+                         ":",
+                         tt$lowfloor,
+                         tt$newminute,
+                         " ",
+                         tt$lampm,#,
+                         sep=""#,
+                         #collapse = ""
+              )
+              }
+            )
+          
+          temp_join$value_new <- tt$final
           
           #adjust value
-          results[varName]<- temp_join$value
+          results[varName]<- temp_join$value_new
         }
-        
-
         
         #for a categ type, swap its contents from index to label 
         if (varName %in% cat_variables) {
