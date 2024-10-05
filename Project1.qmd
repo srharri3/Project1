@@ -527,6 +527,8 @@ We need to adjust numeric fields from char to num/time and replace enumerated ca
 
 We need to transform each column according to its type and lookup values. Also, we take the header names from row 1 into the column labels, removing row 1.
 
+If I were to rebuild this formatting function, I'd consider splitting it up for cleaner, modular usage. Since I built it over time and never revised it, it is currently functional but a bit messy and large for its purpose.
+
 ```{r}
 # function:
 #   formatResults(results,year=2022)
@@ -827,6 +829,73 @@ multi_test_tibble_2
 ```
 
 Success! Wow!
+
+# TEMP AREA DELETE ME
+
+```{r}
+sample_rows <- c(1,2,3)
+time_sample <- matrix(data=c("N/A (not a worker; worker who worked from home)",
+                            "4:00 p.m. to 4:04 p.m.",
+                            "8:45 a.m. to 8:49 a.m."),
+                      nrow=3,
+                      ncol=1,
+                      byrow=TRUE,
+                      dimnames = list(sample_rows,"JWAP")) |> as_tibble()
+#as_tibble(
+
+#make a temp tibble; edit to have right colname
+ht <- as_tibble(time_sample$JWAP)
+names(ht) <- "JWAP"
+
+#vectorize if/else to create new fields in ht
+ifelse(
+  ht$JWAP == "N/A (not a worker; worker who worked from home)",
+  ht$revised <- NA,
+  { 
+    ht$ltime <- word(ht$JWAP,1)
+    ht$lampm <- word(ht$JWAP,2)
+    ht$revised <- 'x'
+  
+  }
+  )
+
+for (i in nrow(ht)) {
+  if (ht$JWAP[i] == "N/A (not a worker; worker who worked from home)") {
+    print(ht$JWAP[i])
+    ht$JWAP[i] <- NA
+    print(ht$JWAP[i])
+  }
+  else {
+    ltime <- word(ht$JWAP[i],1)
+    lampm <- word(ht$JWAP[i],2)
+    #ltimepm <- ifelse(lampm=="p.m.",12,0)
+    
+    rtime <- word(ht$JWAP[i],4)
+    rampm <- word(ht$JWAP[i],5)
+    #rtimepm <- ifelse(rampm=="p.m.",12,0)
+    
+    lhour <- as.numeric(word(ltime,1,sep = ":")) #+ lampm #need to add the lampm?
+    lminute <- as.numeric(word(ltime,2,sep = ":")) #+ rampm
+    
+    rhour <- as.numeric(word(rtime,1,sep = ":")) #need to add the lampm?
+    rminute <- as.numeric(word(rtime,2,sep = ":"))
+    
+    diffhour <- rhour-lhour
+    diffminute <- rminute-lminute
+    
+    ht$JWAP_new[i] <- paste(lhour+floor(diffhour/2),
+                            ":",
+                            lminute+floor(diffminute/2),
+                            " ",
+                            lampm,
+                            sep = '',
+                            collapse = '')
+  }
+  
+}
+
+```
+
 
 # Note on Person Level Records
 
