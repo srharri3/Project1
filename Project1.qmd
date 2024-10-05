@@ -120,6 +120,7 @@ library(RSQLite)
 #for string manipulations, esp time formatting
 library(stringr)
 library(lubridate)
+library(stringi)
 ```
 
 ## Sample API Test
@@ -555,7 +556,7 @@ formatResults <- function(results,year=2022) {
     year_on <- FALSE
   
   #update the column names from row1
-  names(results) <- results[1,]
+  names(results) <- as.vector(results[1,])
   
   #fix year if needed
   if (year_on) attributes(results)$names[length(results)] <- 'Year'
@@ -627,10 +628,91 @@ formatResults <- function(results,year=2022) {
           lookup$name <- as.numeric(lookup$name)
           
           #make a temp join but only keep the replaced char labels in the result column
-          temp <- results[varName]
+          temp <- as_tibble(results[varName]) ###edit here
           names(temp) <- 'name'
           temp_join <- left_join(temp,lookup,by=join_by(name == name))
         
+          temp_join$value_new=0
+
+          #new temp tibble
+          tt <- temp_join
+          tt$ltime <- word(tt$value,1)
+          tt$lampm <- word(tt$value,2)
+          
+          tt$rtime <- word(tt$value,4)
+          tt$rampm <- word(tt$value,5)
+          
+          tt$lhour <- as.numeric(word(tt$ltime,1,sep=":"))
+          tt$lminute <- as.numeric(word(tt$ltime,2,sep=":"))
+          tt$rhour <- as.numeric(word(tt$rtime,1,sep=":"))
+          tt$rminute <- as.numeric(word(tt$rtime,2,sep=":"))
+          
+          tt$diffhour <- tt$rhour-tt$lhour
+          tt$diffminute <- tt$rminute-tt$lminute
+          tt <- mutate(tt,
+                       "newhour"=lhour+floor(diffhour/2),
+                       "newminute"=lminute+floor(diffminute/2)
+                       )
+          
+          tt$lowfloor <- case_when(
+            tt$newminute<10 ~ "0",
+            .default = "")
+          
+          tt$final <- case_when(
+            word(tt$value,1) == "N/A" ~ NA,
+            .default = {
+              stri_paste(tt$newhour,
+                         ":",
+                         tt$lowfloor,
+                         tt$newminute,
+                         " ",
+                         tt$lampm,#,
+                         sep=""#,
+                         #collapse = ""
+              )
+              }
+            )
+          
+          temp_join$value_new <- tt$final
+
+          
+          
+#         for (i in 1:nrow(temp_join)) {
+#         print(i)
+#           #adjust NAs accordingly
+#           if (word(temp_join$value[i],1) == "N/A") {
+#             temp_join$value_new[i] <- NA
+#         
+#           } else {
+#         
+#              ltime <- word(temp_join$value[i],1)
+#              lampm <- word(temp_join$value[i],2)
+#              
+#              rtime <- word(temp_join$value[i],4)
+#             rampm <- word(temp_join$value[i],5)
+#             
+#             lhour <- as.numeric(word(ltime,1,sep = ":")) 
+#             lminute <- as.numeric(word(ltime,2,sep = ":")) 
+#             
+#             rhour <- as.numeric(word(rtime,1,sep = ":")) 
+#             rminute <- as.numeric(word(rtime,2,sep = ":"))
+#             
+#             diffhour <- rhour-lhour
+#             diffminute <- rminute-lminute
+#             
+#             temp_join$value_new[i] <- paste(lhour+floor(diffhour/2),
+#                                       ":",
+#                                       if (lminute+floor(diffminute/2) < 10)
+#                                         "0",
+#                                       lminute+floor(diffminute/2),
+#                                       " ",
+#                                       lampm,
+#                                       sep = '',
+#                                       collapse = '')
+#           }
+#         }
+#         
+#         
           #get start and end times
           #ltime <- word(temp_join$value,1)
           #lampm <- word(temp_join$value,2)
@@ -655,7 +737,7 @@ formatResults <- function(results,year=2022) {
           #      minutes = floor(temp_join$lminute+(temp_join$diffminute/2)))
           
           #adjust value
-          results[varName]<- temp_join$value
+          results[varName]<- temp_join$value_new
         }
         
 
@@ -846,56 +928,136 @@ time_sample <- matrix(data=c("N/A (not a worker; worker who worked from home)",
 #make a temp tibble; edit to have right colname
 ht <- as_tibble(time_sample$JWAP)
 names(ht) <- "JWAP"
+ht$JWAP_new=0
 
-#vectorize if/else to create new fields in ht
-ifelse(
-  ht$JWAP == "N/A (not a worker; worker who worked from home)",
-  ht$revised <- NA,
-  { 
-    ht$ltime <- word(ht$JWAP,1)
-    ht$lampm <- word(ht$JWAP,2)
-    ht$revised <- 'x'
-  
-  }
-  )
+for (i in 1:nrow(ht)) {
 
-for (i in nrow(ht)) {
-  if (ht$JWAP[i] == "N/A (not a worker; worker who worked from home)") {
-    print(ht$JWAP[i])
+  #adjust NAs accordingly
+  if (word(ht$JWAP[i],1) == "N/A") {
     ht$JWAP[i] <- NA
-    print(ht$JWAP[i])
-  }
-  else {
+
+  } else {
+
     ltime <- word(ht$JWAP[i],1)
     lampm <- word(ht$JWAP[i],2)
-    #ltimepm <- ifelse(lampm=="p.m.",12,0)
     
     rtime <- word(ht$JWAP[i],4)
     rampm <- word(ht$JWAP[i],5)
-    #rtimepm <- ifelse(rampm=="p.m.",12,0)
     
-    lhour <- as.numeric(word(ltime,1,sep = ":")) #+ lampm #need to add the lampm?
-    lminute <- as.numeric(word(ltime,2,sep = ":")) #+ rampm
+    lhour <- as.numeric(word(ltime,1,sep = ":")) 
+    lminute <- as.numeric(word(ltime,2,sep = ":")) 
     
-    rhour <- as.numeric(word(rtime,1,sep = ":")) #need to add the lampm?
+    rhour <- as.numeric(word(rtime,1,sep = ":")) 
     rminute <- as.numeric(word(rtime,2,sep = ":"))
     
     diffhour <- rhour-lhour
     diffminute <- rminute-lminute
     
-    ht$JWAP_new[i] <- paste(lhour+floor(diffhour/2),
-                            ":",
-                            lminute+floor(diffminute/2),
-                            " ",
-                            lampm,
-                            sep = '',
-                            collapse = '')
+    ht$JWAP_new[i] <- stri_paste(lhour+floor(diffhour/2),
+                                 ":",
+                                 if (lminute+floor(diffminute/2) < 10)
+                                   "0",
+                                 lminute+floor(diffminute/2),
+                                 " ",
+                                 lampm,
+                                 sep = '',
+                                 collapse = '')
   }
   
 }
 
 ```
 
+
+```{r}
+sample_rows <- c(1,2,3)
+time_sample <- matrix(data=c("N/A (not a worker; worker who worked from home)",
+                            "4:00 p.m. to 4:04 p.m.",
+                            "8:45 a.m. to 8:49 a.m."),
+                      nrow=3,
+                      ncol=1,
+                      byrow=TRUE,
+                      dimnames = list(sample_rows,"JWAP")) |> as_tibble()
+#as_tibble(
+
+#make a temp tibble; edit to have right colname
+ht <- as_tibble(time_sample$JWAP)
+names(ht) <- "value"
+
+#add NAs
+#just prep everything and then, IFELSE at end for NA vs new value
+
+#ht$a1 <- ifelse(word(ht$JWAP,1) == "N/A",NA,ht$JWAP)
+
+#new temp tibble
+tt <- ht
+tt$ltime <- word(tt$value,1)
+tt$lampm <- word(tt$value,2)
+
+tt$rtime <- word(tt$value,4)
+tt$rampm <- word(tt$value,5)
+
+tt$lhour <- as.numeric(word(tt$ltime,1,sep=":"))
+tt$lminute <- as.numeric(word(tt$ltime,2,sep=":"))
+tt$rhour <- as.numeric(word(tt$rtime,1,sep=":"))
+tt$rminute <- as.numeric(word(tt$rtime,2,sep=":"))
+
+tt$diffhour <- tt$rhour-tt$lhour
+tt$diffminute <- tt$rminute-tt$lminute
+tt <- mutate(tt,
+             "newhour"=lhour+floor(diffhour/2),
+             "newminute"=lminute+floor(diffminute/2)
+             )
+
+tt$lowfloor <- case_when(
+  tt$newminute<10 ~ "0",
+  .default = "")
+
+tt$final <- case_when(
+  word(tt$value,1) == "N/A" ~ NA,
+  .default = {
+    stri_paste(tt$newhour,
+               ":",
+               tt$lowfloor,
+               tt$newminute,
+               " ",
+               tt$lampm,#,
+               sep=""#,
+               #collapse = ""
+    )
+    }
+  )
+
+#tt$final <- if_else(word(tt$value,1) == "N/A",
+#                    NA,
+#                    {
+#                      stri_paste(tt$lhour+floor(tt$diffhour/2),
+#                                 ":",
+#                                 ifelse(tt$lminute+floor(tt$diffminute/2) < 10,"0",""),
+#                                 tt$lminute+floor(tt$diffminute/2),
+#                                 " ",
+#                                 tt$lampm,
+#                                 sep="",
+#                                 collapse = ""
+#                      )
+#                    }
+#                    )
+#
+#    
+#    ht$JWAP_new[i] <- paste(lhour+floor(diffhour/2),
+#                            ":",
+#                            if (lminute+floor(diffminute/2) < 10)
+#                              "0",
+#                            lminute+floor(diffminute/2),
+#                            " ",
+#                            lampm,
+#                            sep = '',
+#                            collapse = '')
+#  }
+#  
+#}
+#
+```
 
 # Note on Person Level Records
 
